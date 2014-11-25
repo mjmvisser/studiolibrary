@@ -282,14 +282,14 @@ class Analytics():
     def logEvent(self, name, value):
         try:
             url = self._url + '&t=event&ec=' + name + '&ea=' + value
-            self.send(url)
+            #self.send(url)
         except Exception:
             pass
 
     def logScreen(self, name):
         try:
             url = self._url + '&t=appview&cd=' + name
-            self.send(url)
+            #self.send(url)
         except Exception:
             pass
 
@@ -317,7 +317,7 @@ class Analytics():
             pass
 
 
-def main(name = None, **kwargs):
+def main(name = None, show=True, **kwargs):
     import mutils
     import studioLibrary
     if not name:
@@ -347,18 +347,19 @@ def main(name = None, **kwargs):
             studioLibrary.__scriptJob = maya.cmds.scriptJob(event=['quitApplication', 'import studioLibrary;\nfor window in studioLibrary.mainWindows().values():\n\twindow.saveSettings()'])
     if not root:
         root = LibrarySettings(name).get('kwargs', None).get('root', None)
-        if not root:
+        if not root and show:
             root = showWelcomeDialog()
             kwargs['root'] = root
     if name not in studioLibrary.mainWindows():
         w = studioLibrary.MainWindow(name=name, **kwargs)
         studioLibrary.mainWindows().setdefault(name, w)
-    else:
+    elif show:
         w = studioLibrary.mainWindows()[name]
         w.loadLibrary(name, kwargs)
         w.close()
-    w.showNormal()
-    w.raiseWindow()
+    if show:
+        w.showNormal()
+        w.raiseWindow()
     if not mutils.isMaya():
         sys.exit(studioLibrary.__application.exec_())
     return studioLibrary.mainWindows().get(name, None)
