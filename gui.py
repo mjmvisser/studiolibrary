@@ -1,4 +1,4 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studioLibrary/1.5.8/build27/studioLibrary\gui.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.6.14/build27/studiolibrary\gui.py
 """
 Released subject to the BSD License
 Please visit http://www.voidspace.org.uk/python/license.shtml
@@ -44,7 +44,7 @@ try:
 except ImportError as msg:
     print msg
 
-import studioLibrary
+import studiolibrary
 try:
     from PySide import QtGui
     from PySide import QtCore
@@ -71,7 +71,7 @@ def loadUi(widget, path = None):
         dirname = os.path.dirname(os.path.abspath(inspect.getfile(widget.__class__)))
         basename = widget.__class__.__name__
         path = dirname + '/ui/' + basename + '.ui'
-    if studioLibrary.isPySide():
+    if studiolibrary.isPySide():
         loadUiPySide(widget, path)
     else:
         loadUiPyQt4(widget, path)
@@ -104,24 +104,6 @@ def isControlModifier():
     return modifiers == QtCore.Qt.ControlModifier
 
 
-def styleSheet(self):
-    try:
-        if isinstance(self, studioLibrary.MainWindow):
-            return QtCore.QString('')
-    except:
-        pass
-
-    return __test(self)
-
-
-try:
-    __test = QtGui.QMainWindow.styleSheet
-    QtGui.QMainWindow.styleSheet = styleSheet
-    QtGui.QMainWindow.styleSheet = styleSheet
-except:
-    import traceback
-    traceback.print_exc()
-
 class Action(QtGui.QAction):
 
     def __init__(self, *args):
@@ -138,11 +120,11 @@ class Action(QtGui.QAction):
         self.callback(*self.args)
 
 
-class LibrarySettings(studioLibrary.Settings):
+class LibrarySettings(studiolibrary.Settings):
 
     def __init__(self, name):
-        studioLibrary.Settings.__init__(self, 'Library', name)
-        self.setdefault('sort', studioLibrary.Ordered)
+        studiolibrary.Settings.__init__(self, 'Library', name)
+        self.setdefault('sort', studiolibrary.SortOption.Ordered)
         self.setdefault('showMenu', True)
         self.setdefault('showFolders', True)
         self.setdefault('showPreview', True)
@@ -182,7 +164,7 @@ class DialogFrame(QtGui.QWidget):
 
     def __init__(self, *args):
         QtGui.QWidget.__init__(self, *args)
-        studioLibrary.loadUi(self)
+        studiolibrary.loadUi(self)
 
     def window(self):
         return self.parent().window()
@@ -195,7 +177,7 @@ class PreviewWidget(QtGui.QWidget):
 
     def __init__(self, *args):
         QtGui.QWidget.__init__(self, *args)
-        studioLibrary.loadUi(self)
+        studiolibrary.loadUi(self)
 
     def window(self):
         return self.parent().window()
@@ -205,7 +187,7 @@ class FoldersFrame(QtGui.QFrame):
 
     def __init__(self, *args):
         QtGui.QFrame.__init__(self, *args)
-        studioLibrary.loadUi(self)
+        studiolibrary.loadUi(self)
 
     def window(self):
         return self.parent().window()
@@ -215,7 +197,7 @@ class InfoFrame(QtGui.QMainWindow):
 
     def __init__(self, parent):
         QtGui.QMainWindow.__init__(self, parent, QtCore.Qt.WindowStaysOnTopHint | QtCore.Qt.FramelessWindowHint)
-        studioLibrary.loadUi(self)
+        studiolibrary.loadUi(self)
 
     def _show(self, rect):
         QtGui.QMainWindow.show(self)
@@ -225,17 +207,17 @@ class AboutDialog(QtGui.QDialog):
 
     def __init__(self, *args):
         QtGui.QDialog.__init__(self, *args)
-        studioLibrary.loadUi(self)
+        studiolibrary.loadUi(self)
 
 
 class WelcomeDialog(QtGui.QDialog):
 
     def __init__(self, *args):
         QtGui.QDialog.__init__(self, *args)
-        studioLibrary.loadUi(self)
+        studiolibrary.loadUi(self)
         self.ui.cancelButton.clicked.connect(self.close)
         self.ui.browseButton.clicked.connect(self.browse)
-        self.setWindowTitle('Studio Library - %s' % studioLibrary.version())
+        self.setWindowTitle('Studio Library - %s' % studiolibrary.version())
         self._path = ''
         self._directory = ''
 
@@ -262,7 +244,7 @@ class CheckForUpdatesThread(QtCore.QThread):
         QtCore.QThread.__init__(self, *args)
 
     def run(self):
-        if studioLibrary.isUpdateAvailable():
+        if studiolibrary.isUpdateAvailable():
             self.emit(QtCore.SIGNAL('updateAvailable()'))
 
 
@@ -286,13 +268,13 @@ class SearchWidget(QtGui.QLineEdit):
             margin.setLeft(21)
             self.setTextMargins(margin)
         except:
-            print 'studioLibrary: Text margins are not supported!'
+            print 'studiolibrary: Text margins are not supported!'
 
         self.pushButton = SearchButton(self)
         self.pushButton.setObjectName('searchButton')
         self.pushButton.move(-3, 3)
         self.pushButton.show()
-        pixmap = studioLibrary.pixmap('search', QtGui.QColor(255, 255, 255, 200))
+        pixmap = studiolibrary.pixmap('search', QtGui.QColor(255, 255, 255, 200))
         self.pushButton.setIcon(QtGui.QIcon(QtGui.QPixmap(pixmap)))
         self.setToolTip('Search through the visible items. Use "and", "or" for a more complex filter.')
 
@@ -340,7 +322,7 @@ class StatusWidget(QtGui.QWidget):
 
     def __init__(self, *args):
         QtGui.QWidget.__init__(self, *args)
-        studioLibrary.loadUi(self)
+        studiolibrary.loadUi(self)
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.setObjectName('statusWidget')
         self.setFixedHeight(18)
@@ -349,19 +331,19 @@ class StatusWidget(QtGui.QWidget):
         QtCore.QObject.connect(self._timer, QtCore.SIGNAL('timeout()'), self.clear)
 
     def setError(self, text, msec = statusMSec):
-        icon = studioLibrary.icon('error14', ignoreOverride=True)
+        icon = studiolibrary.icon('error14', ignoreOverride=True)
         self.ui.button.setIcon(icon)
         self.ui.message.setStyleSheet('color: rgb(222, 0, 0);')
         self.setText(text, msec)
 
     def setWarning(self, text, msec = statusMSec):
-        icon = studioLibrary.icon('warning14', ignoreOverride=True)
+        icon = studiolibrary.icon('warning14', ignoreOverride=True)
         self.ui.button.setIcon(icon)
         self.ui.message.setStyleSheet('color: rgb(222, 180, 0);')
         self.setText(text, msec)
 
     def setInfo(self, text, msec = statusMSec):
-        icon = studioLibrary.icon('info14', ignoreOverride=True)
+        icon = studiolibrary.icon('info14', ignoreOverride=True)
         self.ui.button.setIcon(icon)
         self.ui.message.setStyleSheet('')
         self.setText(text, msec)
@@ -378,12 +360,12 @@ class StatusWidget(QtGui.QWidget):
         self._timer.stop()
         self.ui.message.setText('')
         self.ui.message.setStyleSheet('')
-        icon = studioLibrary.icon('blank', ignoreOverride=True)
+        icon = studiolibrary.icon('blank', ignoreOverride=True)
         self.ui.button.setIcon(icon)
 
 
 class Communicate(QtCore.QObject):
-    if studioLibrary.isPySide():
+    if studiolibrary.isPySide():
         frameChanged = QtCore.Signal(str)
     else:
         frameChanged = QtCore.pyqtSignal(str)
@@ -479,7 +461,7 @@ class SequenceWidget(QtGui.QToolButton):
         self._sequenceTimer.communicate.frameChanged.connect(lambda filename, self = self: self.frameChanged(filename))
         self.setSize(150, 150)
         self.setMouseTracking(True)
-        self.setIcon(studioLibrary.icon('thumbnail'))
+        self.setIcon(studiolibrary.icon('thumbnail'))
 
     def setSize(self, w, h):
         self._size = QtCore.QSize(w, h)
@@ -489,7 +471,7 @@ class SequenceWidget(QtGui.QToolButton):
     def setDirname(self, dirname):
         self._sequenceTimer.setDirname(dirname)
         if self._sequenceTimer.frames():
-            self.setIcon(studioLibrary.icon(self._sequenceTimer.frames()[0]))
+            self.setIcon(studiolibrary.icon(self._sequenceTimer.frames()[0]))
 
     def enterEvent(self, event):
         self._sequenceTimer.start()
@@ -502,12 +484,12 @@ class SequenceWidget(QtGui.QToolButton):
             percent = 1.0 - float(self.width() - event.pos().x()) / float(self.width())
             frame = int(self._sequenceTimer.duration() * percent)
             self._sequenceTimer.setCurrentFrame(frame)
-            self.setIcon(studioLibrary.icon(self._sequenceTimer.currentFilename()))
+            self.setIcon(studiolibrary.icon(self._sequenceTimer.currentFilename()))
 
     def frameChanged(self, filename):
         if not isControlModifier():
             self._filename = filename
-            self.setIcon(studioLibrary.icon(filename))
+            self.setIcon(studiolibrary.icon(filename))
 
     def paintEvent(self, event):
         QtGui.QToolButton.paintEvent(self, event)
@@ -525,16 +507,15 @@ class MainWindow(QtGui.QWidget):
 
     def __init__(self, name = 'Default', **kwargs):
         QtGui.QWidget.__init__(self, None)
-        studioLibrary.loadUi(self)
-        self.setObjectName('studioLibrary' + name)
-        analytics = studioLibrary.Analytics()
-        analytics.logScreen('Main')
-        if mutils.isMaya():
+        studiolibrary.loadUi(self)
+        self.setObjectName('studiolibrary' + name)
+        studiolibrary.analytics().logScreen('Main')
+        if studiolibrary.isMaya():
             import maya.cmds
             mayaOS = maya.cmds.about(os=True)
             mayaVersion = maya.cmds.about(v=True)
             aboutMaya = (mayaVersion + '-' + mayaOS).replace(' ', '-')
-            analytics.logEvent('About-Maya', aboutMaya)
+            studiolibrary.analytics().logEvent('About-Maya', aboutMaya)
         self._name = name
         self._color = 'rgb(245, 245, 0, 255)'
         self._padding = 7
@@ -548,7 +529,7 @@ class MainWindow(QtGui.QWidget):
         self._isLoaded = False
         self._showFolders = False
         self._showDeleted = False
-        self._sort = studioLibrary.Ordered
+        self._sort = studiolibrary.SortOption.Ordered
         self._showLabelsAction = True
         self._plugins = {}
         self._kwargs = {'name': name}
@@ -566,9 +547,9 @@ class MainWindow(QtGui.QWidget):
         self.connect(self.ui.updateButton, QtCore.SIGNAL('clicked()'), self.help)
         self.connect(self.ui.createButton, QtCore.SIGNAL('clicked()'), self.showNewMenu)
         self.connect(self.ui.settingsButton, QtCore.SIGNAL('clicked()'), self.showSettingsMenu)
-        pixmap = studioLibrary.icon('cog', QtGui.QColor(255, 255, 255, 220), ignoreOverride=True)
+        pixmap = studiolibrary.icon('cog', QtGui.QColor(255, 255, 255, 220), ignoreOverride=True)
         self.ui.settingsButton.setIcon(pixmap)
-        pixmap = studioLibrary.icon('addItem', QtGui.QColor(255, 255, 255, 240), ignoreOverride=True)
+        pixmap = studiolibrary.icon('addItem', QtGui.QColor(255, 255, 255, 240), ignoreOverride=True)
         self.ui.createButton.setIcon(pixmap)
         self.ui.updateButton.hide()
         self.layout().setContentsMargins(0, 0, 0, 0)
@@ -592,34 +573,34 @@ class MainWindow(QtGui.QWidget):
         self.ui.splitter.insertWidget(2, self.ui.previewFrame)
         self.ui.statusLayout.addWidget(self.ui.statusWidget)
         self.ui.newMenu = QtGui.QMenu(self)
-        self.ui.newMenu.setIcon(studioLibrary.icon('new14'))
+        self.ui.newMenu.setIcon(studiolibrary.icon('new14'))
         self.ui.newMenu.setTitle('New')
-        action = QtGui.QAction(studioLibrary.icon('folder14'), 'Folder', self.ui.newMenu)
+        action = QtGui.QAction(studiolibrary.icon('folder14'), 'Folder', self.ui.newMenu)
         self.connect(action, QtCore.SIGNAL('triggered(bool)'), self.showCreateFolderDialog)
         self.ui.newMenu.addAction(action)
         self.ui.editRecordMenu = ContextMenu(self)
         self.ui.editRecordMenu.setTitle('Edit')
-        self.ui.printPrettyAction = QtGui.QAction(studioLibrary.icon('print'), 'Print', self.ui.editRecordMenu)
+        self.ui.printPrettyAction = QtGui.QAction(studiolibrary.icon('print'), 'Print', self.ui.editRecordMenu)
         action.connect(self.ui.printPrettyAction, QtCore.SIGNAL('triggered(bool)'), self.printPrettyRecords)
         self.ui.editRecordMenu.addAction(self.ui.printPrettyAction)
-        self.ui.deleteRecordAction = QtGui.QAction(studioLibrary.icon('trash'), 'Delete', self.ui.editRecordMenu)
+        self.ui.deleteRecordAction = QtGui.QAction(studiolibrary.icon('trash'), 'Delete', self.ui.editRecordMenu)
         action.connect(self.ui.deleteRecordAction, QtCore.SIGNAL('triggered(bool)'), self.deleteSelectedRecords)
         self.ui.editRecordMenu.addAction(self.ui.deleteRecordAction)
-        self.ui.deleteRenameAction = QtGui.QAction(studioLibrary.icon('rename'), 'Rename', self.ui.editRecordMenu)
+        self.ui.deleteRenameAction = QtGui.QAction(studiolibrary.icon('rename'), 'Rename', self.ui.editRecordMenu)
         action.connect(self.ui.deleteRenameAction, QtCore.SIGNAL('triggered(bool)'), self.renameSelectedRecord)
         self.ui.editRecordMenu.addAction(self.ui.deleteRenameAction)
-        self.ui.showRecordAction = QtGui.QAction(studioLibrary.icon('folder14'), 'Show in folder', self.ui.editRecordMenu)
+        self.ui.showRecordAction = QtGui.QAction(studiolibrary.icon('folder14'), 'Show in folder', self.ui.editRecordMenu)
         action.connect(self.ui.showRecordAction, QtCore.SIGNAL('triggered(bool)'), self.openSelectedRecords)
         self.ui.editRecordMenu.addAction(self.ui.showRecordAction)
         self.ui.editFolderMenu = ContextMenu(self)
         self.ui.editFolderMenu.setTitle('Edit')
-        action = QtGui.QAction(studioLibrary.icon('trash'), 'Delete', self.ui.editFolderMenu)
+        action = QtGui.QAction(studiolibrary.icon('trash'), 'Delete', self.ui.editFolderMenu)
         action.connect(action, QtCore.SIGNAL('triggered(bool)'), self.deleteSelectedFolders)
         self.ui.editFolderMenu.addAction(action)
-        action = QtGui.QAction(studioLibrary.icon('rename'), 'Rename', self.ui.editFolderMenu)
+        action = QtGui.QAction(studiolibrary.icon('rename'), 'Rename', self.ui.editFolderMenu)
         action.connect(action, QtCore.SIGNAL('triggered(bool)'), self.renameSelectedFolder)
         self.ui.editFolderMenu.addAction(action)
-        action = QtGui.QAction(studioLibrary.icon('folder14'), 'Show in folder', self.ui.editFolderMenu)
+        action = QtGui.QAction(studiolibrary.icon('folder14'), 'Show in folder', self.ui.editFolderMenu)
         action.connect(action, QtCore.SIGNAL('triggered(bool)'), self.openSelectedFolders)
         self.ui.editFolderMenu.addAction(action)
         self.ui.sortMenu = QtGui.QMenu(self)
@@ -637,7 +618,7 @@ class MainWindow(QtGui.QWidget):
         self.connect(self._sortOrderedAction, QtCore.SIGNAL('triggered(bool)'), self.setSortOrdered)
         self.ui.sortMenu.addAction(self._sortOrderedAction)
         self.ui.settingsMenu = QtGui.QMenu(self)
-        self.ui.settingsMenu.setIcon(studioLibrary.icon('settings14'))
+        self.ui.settingsMenu.setIcon(studiolibrary.icon('settings14'))
         self.ui.settingsMenu.setTitle('Settings')
         self._librariesMenu = QtGui.QMenu(self)
         self._librariesMenu.setTitle('Libraries')
@@ -676,7 +657,7 @@ class MainWindow(QtGui.QWidget):
         self._showSpacingAction.setCheckable(True)
         self.connect(self._showSpacingAction, QtCore.SIGNAL('triggered(bool)'), self.showSpacing)
         self.ui.settingsMenu.addAction(self._showSpacingAction)
-        if mutils.isMaya():
+        if studiolibrary.isMaya():
             self.ui.settingsMenu.addSeparator()
             self._dockLeftAction = QtGui.QAction('Dock left', self.ui.settingsMenu)
             self.connect(self._dockLeftAction, QtCore.SIGNAL('triggered(bool)'), self.dockLeft)
@@ -703,7 +684,7 @@ class MainWindow(QtGui.QWidget):
         separator = QtGui.QAction('', self.ui.settingsMenu)
         separator.setSeparator(True)
         self.ui.settingsMenu.addAction(separator)
-        if mutils.isMaya():
+        if studiolibrary.isMaya():
             self._showDebugAction = QtGui.QAction('Debug mode', self.ui.settingsMenu)
             self._showDebugAction.setCheckable(True)
             self._showDebugAction.setChecked(False)
@@ -769,24 +750,24 @@ class MainWindow(QtGui.QWidget):
         if self.isDocked():
             title = 'Studio Library - ' + self.name()
         else:
-            title = 'Studio Library - ' + studioLibrary.__version__ + ' - ' + self.name()
+            title = 'Studio Library - ' + studiolibrary.__version__ + ' - ' + self.name()
         if self.isLocked():
             title += ' (Locked)'
         self.setWindowTitle(title)
-        if mutils.isMaya() and self._mayaDockWidget:
+        if studiolibrary.isMaya() and self._mayaDockWidget:
             import maya.cmds
             maya.cmds.dockControl(self._mayaDockWidget, edit=True, label=title)
 
     def setLocked(self, value):
         if value:
             self.ui.createButton.setEnabled(True)
-            self.ui.createButton.setIcon(studioLibrary.icon('lock', QtGui.QColor(222, 222, 222, 222), ignoreOverride=True))
+            self.ui.createButton.setIcon(studiolibrary.icon('lock', QtGui.QColor(222, 222, 222, 222), ignoreOverride=True))
         else:
             self.ui.createButton.setEnabled(True)
-            self.ui.createButton.setIcon(studioLibrary.icon('addItem', ignoreOverride=True))
+            self.ui.createButton.setIcon(studiolibrary.icon('addItem', ignoreOverride=True))
             self.ui.createButton.show()
-        self.updateWindowTitle()
         self._isLocked = value
+        self.updateWindowTitle()
 
     def kwargs(self):
         return self._kwargs
@@ -810,7 +791,7 @@ class MainWindow(QtGui.QWidget):
         return self
 
     def isDocked(self):
-        if mutils.isMaya():
+        if studiolibrary.isMaya():
             import maya.cmds
             if self._mayaDockWidget:
                 return not maya.cmds.dockControl(self._mayaDockWidget, query=True, floating=True)
@@ -822,7 +803,7 @@ class MainWindow(QtGui.QWidget):
         return self._dockArea
 
     def dockLocationChanged(self, area):
-        if studioLibrary.isPySide():
+        if studiolibrary.isPySide():
             if area == QtCore.Qt.DockWidgetArea.RightDockWidgetArea:
                 self._dockArea = 2
             elif area == QtCore.Qt.DockWidgetArea.LeftDockWidgetArea:
@@ -839,7 +820,7 @@ class MainWindow(QtGui.QWidget):
         self.parentX().setMinimumWidth(15)
 
     def raiseWindow(self):
-        if mutils.isMaya() and self._mayaDockWidget:
+        if studiolibrary.isMaya() and self._mayaDockWidget:
             import maya.cmds
             maya.cmds.dockControl(self._mayaDockWidget, edit=True, visible=True, r=True)
 
@@ -860,7 +841,7 @@ class MainWindow(QtGui.QWidget):
                 self._mayaLayoutWidget = None
 
     def floating(self):
-        if mutils.isMaya():
+        if studiolibrary.isMaya():
             import maya.cmds
             if maya.cmds.dockControl(str(self.objectName()), q=1, ex=1):
                 maya.cmds.dockControl(str(self.objectName()), e=1, fl=1)
@@ -877,7 +858,7 @@ class MainWindow(QtGui.QWidget):
         else:
             area = 'left'
             floating = True
-        if mutils.isMaya():
+        if studiolibrary.isMaya():
             import maya.cmds
             if not self._mayaDockWidget:
                 self.deleteDockWidget()
@@ -931,32 +912,13 @@ class MainWindow(QtGui.QWidget):
     def reloadStyle(self):
 
         def __decode(value):
-            result = []
-            for i in range(2, len(value), 3):
-                result.append(value[i])
-
-            result = ''.join(result)
-            return result.decode('base64')
+            return value.decode('base64')
 
         def __encode(value):
-            end = False
-            result = []
-            a = value.encode('base64')
-            for block in a:
-                r = __rand()
-                if block == '=':
-                    end = True
-                if end and block != '=':
-                    break
-                result.extend([r, block])
+            return value.encode('base64')
 
-            return ''.join(result)
-
-        def __rand():
-            return ''.join([ random.choice('FEW57wefABCxqJHPEYEUDFJCVDFCDwpkyncvr135965dfbxcc') for i in xrange(2) ])
-
-        style = studioLibrary.dirname() + '/style.qss'
-        style2 = studioLibrary.dirname() + '/style.qssx'
+        style = studiolibrary.dirname() + '/style.qss'
+        style2 = studiolibrary.dirname() + '/style.qssx'
         if os.path.exists(style):
             f = open(style, 'r')
             data = f.read()
@@ -968,10 +930,10 @@ class MainWindow(QtGui.QWidget):
             data = __decode(data)
         else:
             data = __decode(_data)
-        data = data.replace('DIRNAME', studioLibrary.dirname())
+        data = data.replace('DIRNAME', studiolibrary.dirname())
         data = data.replace('FOCUSBACKGROUNDCOLOR', self.color())
         data = data.replace('FOREGROUNDCOLOR', 'rgb(255, 255, 255)')
-        data = data.replace('BACKGROUNDCOLOR', 'rgb(30, 30, 30)')
+        data = data.replace('BACKGROUNDCOLOR', 'rgb(60, 60, 60)')
         data = data.replace('FOCUSCOLOR', 'rgb(240, 240, 240)')
         data = data.replace('COLOR', 'rgb(220, 220, 220)')
         if self.isTabletMode():
@@ -988,13 +950,9 @@ class MainWindow(QtGui.QWidget):
         data = data.replace('SPACING', str(self.spacing()))
         if False:
             color = self.QColor()
-            pixmap = studioLibrary.icon('addItem', color)
+            pixmap = studiolibrary.icon('addItem', color)
             self.ui.createButton.setIcon(pixmap)
-        import inspect
-        try:
-            inspect.getfile(QtGui.QMainWindow.setStyleSheet)
-        except:
-            QtGui.QMainWindow.setStyleSheet(self, data)
+        QtGui.QMainWindow.setStyleSheet(self, data)
 
     def setColor(self, color, force = True):
         if color is None:
@@ -1045,7 +1003,7 @@ class MainWindow(QtGui.QWidget):
     def delete(self):
         self.deleteDockWidget()
         self.deleteSettings(load=False)
-        studioLibrary.removeWindow(self.name())
+        studiolibrary.removeWindow(self.name())
 
     def setName(self, name):
         self._name = name
@@ -1054,7 +1012,7 @@ class MainWindow(QtGui.QWidget):
         return self._name
 
     def settings(self):
-        return studioLibrary.LibrarySettings(self.name())
+        return studiolibrary.LibrarySettings(self.name())
 
     def openSelectedFolders(self):
         folders = self.selectedFolders()
@@ -1106,7 +1064,7 @@ class MainWindow(QtGui.QWidget):
             self.ui.recordsWidget.setViewSize(settings.get('iconSize'))
             self.setFilter(settings.get('filter'))
             background = settings.get('background')
-            background = background.replace('DIRNAME', studioLibrary.dirname())
+            background = background.replace('DIRNAME', studiolibrary.dirname())
             self.setBackground(background)
         except:
             self.parentX().move(100, 100)
@@ -1196,9 +1154,6 @@ class MainWindow(QtGui.QWidget):
             import traceback
             traceback.print_exc()
 
-    def styleSheet(self):
-        return QtCore.QString('')
-
     def setBackground(self, path):
         pass
 
@@ -1286,7 +1241,7 @@ class MainWindow(QtGui.QWidget):
         result = dialog.exec_()
         path = dialog.path()
         if not os.path.exists(path):
-            raise Exception('Cannot find the root folder path \'%s\'. To set the root folder please use the command: studioLibrary.main(root="C:/path")' % path)
+            raise Exception('Cannot find the root folder path \'%s\'. To set the root folder please use the command: studiolibrary.main(root="C:/path")' % path)
         return path
 
     def browseAndSetRootPath(self):
@@ -1358,24 +1313,24 @@ class MainWindow(QtGui.QWidget):
 
     def setSort(self, sort, force = True):
         self._sort = sort
-        if sort == studioLibrary.Ordered:
+        if sort == studiolibrary.SortOption.Ordered:
             self.ui.recordsWidget.setDropEnabled(True)
         else:
             self.ui.recordsWidget.setDropEnabled(False)
-        self._sortNameAction.setChecked(studioLibrary.Name == sort)
-        self._sortOrderedAction.setChecked(studioLibrary.Ordered == sort)
-        self._sortModifiedAction.setChecked(studioLibrary.Modified == sort)
+        self._sortNameAction.setChecked(studiolibrary.SortOption.Name == sort)
+        self._sortOrderedAction.setChecked(studiolibrary.SortOption.Ordered == sort)
+        self._sortModifiedAction.setChecked(studiolibrary.SortOption.Modified == sort)
         if force:
             self.reloadRecords()
 
     def setSortName(self):
-        self.setSort(studioLibrary.Name)
+        self.setSort(studiolibrary.SortOption.Name)
 
     def setSortModified(self):
-        self.setSort(studioLibrary.Modified)
+        self.setSort(studiolibrary.SortOption.Modified)
 
     def setSortOrdered(self):
-        self.setSort(studioLibrary.Ordered)
+        self.setSort(studiolibrary.SortOption.Ordered)
 
     def plugins(self):
         return self._plugins
@@ -1390,14 +1345,14 @@ class MainWindow(QtGui.QWidget):
     def unloadPlugin(self, name):
         plugin = self._plugins.get(name, None)
         if plugin:
-            studioLibrary.unloadPlugin(plugin)
+            studiolibrary.unloadPlugin(plugin)
             del self._plugins[name]
         else:
             print "Cannot find plugin with name '%s'" % name
 
     def loadPlugin(self, name):
         if name not in self._plugins.keys():
-            plugin = studioLibrary.loadPlugin(name, self)
+            plugin = studiolibrary.loadPlugin(name, self)
             self._plugins.setdefault(name, plugin)
         return self._plugins.get(name)
 
@@ -1444,10 +1399,9 @@ class MainWindow(QtGui.QWidget):
          hiddenText))
 
     def help(self):
-        analytics = studioLibrary.Analytics()
-        analytics.logScreen('Help')
+        studiolibrary.analytics().logScreen('Help')
         import webbrowser
-        webbrowser.open('http://www.studioLibrary.com')
+        webbrowser.open('http://www.studiolibrary.com')
 
     def deleteSelectedRecords(self):
         records = self.ui.recordsWidget.selectedRecords()
@@ -1489,6 +1443,31 @@ class MainWindow(QtGui.QWidget):
             self._kwargs['plugins'] = settings.get('kwargs', {}).get('plugins', [])
         settings['kwargs'] = self._kwargs
         settings.save()
+        self.fixKeywordPluginSettings(settings)
+
+    @staticmethod
+    def fixKeywordPluginSettings(settings):
+        """
+        This method will fix an issue when upgrading to 1.6.
+        When upgrading the old plugin names are still stored,
+        so the setting need to reflect the new naming convention.
+        """
+        dirty = False
+        plugins = settings.get('kwargs', {}).get('plugins', [])
+        oldplugins = ['posePlugin',
+         'animationPlugin',
+         'mirrorTablePlugin',
+         'selectionSetPlugin',
+         'lockPlugin']
+        for p in plugins:
+            if p in oldplugins:
+                dirty = True
+                i = plugins.index(p)
+                plugins[i] = 'studiolibraryplugins.' + p.lower()
+
+        if dirty:
+            settings['kwargs']['plugins'] = plugins
+            settings.save()
 
     def loadLibrary(self, name, kwargs = None):
         for a in self._libraryActions:
@@ -1514,7 +1493,7 @@ class MainWindow(QtGui.QWidget):
     def updateSettingsMenu(self):
         self._libraryActions = []
         self._librariesMenu.clear()
-        for name in studioLibrary.libraries():
+        for name in studiolibrary.libraries():
             action = Action(name, self._librariesMenu)
             action.setCallback(self.loadLibrary, name)
             action.setCheckable(True)
@@ -1605,7 +1584,7 @@ class NewFolderDialog(QtGui.QDialog):
 
     def __init__(self, *args):
         QtGui.QDialog.__init__(self, *args)
-        studioLibrary.loadUi(self)
+        studiolibrary.loadUi(self)
         self.setWindowTitle('Create Folder')
         self._text = ''
         self.connect(self.ui.cancelButton, QtCore.SIGNAL('clicked()'), self.close)
@@ -1649,7 +1628,7 @@ class FileSystemModel(QtGui.QFileSystemModel):
                 self._invalid.append(extension)
 
         path = str(self.filePath(index))
-        folder = studioLibrary.Folder(path)
+        folder = studiolibrary.Folder(path)
         dirname = folder.dirname()
         if os.path.exists(dirname):
             for name in os.listdir(dirname):
@@ -1664,14 +1643,14 @@ class FileSystemModel(QtGui.QFileSystemModel):
         if role == QtCore.Qt.DecorationRole:
             if index.column() == 0:
                 dirname = str(self.filePath(index))
-                folder = studioLibrary.Folder(dirname)
+                folder = studiolibrary.Folder(dirname)
                 pixmap = QtGui.QIcon(folder.pixmap())
                 if pixmap:
                     return QtGui.QIcon(folder.pixmap())
         if role == QtCore.Qt.FontRole:
             if index.column() == 0:
                 dirname = str(self.filePath(index))
-                folder = studioLibrary.Folder(dirname)
+                folder = studiolibrary.Folder(dirname)
                 if folder.exists():
                     if folder.bold():
                         font = QtGui.QFont()
@@ -1813,7 +1792,7 @@ class FoldersWidget(QtGui.QTreeView):
         for index in self.selectedIndexes():
             index = self.model().mapToSource(index)
             path = self.model().sourceModel().filePath(index)
-            folder = studioLibrary.Folder(str(path), parent=self)
+            folder = studiolibrary.Folder(str(path), parent=self)
             folders.append(folder)
 
         return folders
@@ -1891,7 +1870,7 @@ class FoldersWidget(QtGui.QTreeView):
                 path = self.window().root() + '/' + dialog.text()
             if not os.path.exists(path):
                 os.makedirs(path)
-            folder = studioLibrary.Folder(path, parent=self)
+            folder = studiolibrary.Folder(path, parent=self)
             folder.save()
             self.selectFolder(folder.dirname())
 
@@ -1900,7 +1879,7 @@ class FoldersWidget(QtGui.QTreeView):
         if not index.isValid():
             return
         index = self.model().mapToSource(index)
-        return studioLibrary.Folder(self.model().sourceModel().filePath(index), parent=self)
+        return studiolibrary.Folder(self.model().sourceModel().filePath(index), parent=self)
 
 
 class RecordsWidget(QtGui.QListView):
@@ -2454,7 +2433,7 @@ class Model(QtCore.QAbstractTableModel):
         return True
 
 
-_data = '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\n'
+_data = 'ClFXaWRnZXQgewoJY29sb3I6IENPTE9SOwp9CgpRV2lkZ2V0I01haW5Gb3JtIHsKICAgIGJhY2tn\ncm91bmQtY29sb3I6IEJBQ0tHUk9VTkRDT0xPUjsKfQoKUVB1c2hCdXR0b24jY3JlYXRlQnV0dG9u\nLCBRUHVzaEJ1dHRvbiNzZXR0aW5nc0J1dHRvbiwgU2VhcmNoV2lkZ2V0IHsKCWJhY2tncm91bmQt\nY29sb3I6IEZPQ1VTQkFDS0dST1VORENPTE9SOwp9CgpRUHVzaEJ1dHRvbiNwaW5CdXR0b24sIFFQ\ndXNoQnV0dG9uI3NlbGVjdENvbnRyb2xzQnV0dG9uIHsKCWJvcmRlci10b3AtbGVmdC1yYWRpdXM6\nIDBweDsKICAgIGJvcmRlci1ib3R0b20tbGVmdC1yYWRpdXM6IDBweDsKfQoKU2VxdWVuY2VXaWRn\nZXQgewogICAgYm9yZGVyOiAwcHggc29saWQgcmdiKDAsIDAsIDAsIDIwKTsKfQoKUUxpbmVFZGl0\nI25hbWVzcGFjZXMsIFFDb21ib0JveCNjb250cm9scyB7Cglib3JkZXItdG9wLXJpZ2h0LXJhZGl1\nczogMHB4OwogICAgYm9yZGVyLWJvdHRvbS1yaWdodC1yYWRpdXM6IDBweDsKfQoKUVdpZGdldDpk\naXNhYmxlZCB7Cgljb2xvcjogcmdiKDE1MCwgMTUwLCAxNTAsIDIzNSk7Cn0KClFXaWRnZXQjU3R1\nZGlvTGlicmFyeVdpbmRvdyAsIFFEaWFsb2csIFFNYWluV2luZG93LCBRQ29tYm9Cb3ggUUFic3Ry\nYWN0SXRlbVZpZXcgewoJYmFja2dyb3VuZC1jb2xvcjogQkFDS0dST1VORENPTE9SOwp9CgpRTWVu\ndSwgUUNvbWJvQm94IFFBYnN0cmFjdEl0ZW1WaWV3ICAgewoJYm9yZGVyOiAxcHggc29saWQgQkFD\nS0dST1VORENPTE9SOwoJYmFja2dyb3VuZC1jb2xvcjogQkFDS0dST1VORENPTE9SOwp9CgpRV2lk\nZ2V0ewoJYm9yZGVyOiAwcHggc29saWQgcmdiYSg0MCwxNTUsNDApOwp9CgpTZXF1ZW5jZVdpZGdl\ndCB7CiAgICBjb2xvcjogcmdiKDQwLCA0MCwgNDApOwogICAgYm9yZGVyOiAxcHggc29saWQgcmdi\nYSgwLCAwLCAwLCAxNTApOwogICAgYmFja2dyb3VuZC1jb2xvcjogcmdiKDI1NCwgMjU1LCAyMzAs\nIDIwMCk7Cn0KClFEaWFsb2cjRGlhbG9newoJYm9yZGVyOiAxcHggc29saWQgcmdiYSgwLDAsMCw1\nMCk7CgliYWNrZ3JvdW5kLWNvbG9yOiByZ2IoNjAsIDYwLCA2MCwgMjU1KTsKfQoKUVB1c2hCdXR0\nb24gewogICAgYm9yZGVyLXJhZGl1czogMHB4OwogICAgYm9yZGVyOiAwcHggc29saWQgcmdiYSgw\nLDAsMCw1MCk7CiAgICBjb2xvcjogcmdiKDIzMCwgMjMwLCAyMzApOwogICAgaGVpZ2h0OiAyN3B4\nOwogICAgcGFkZGluZzogMCA4cHg7Cn0KClFQdXNoQnV0dG9uI3NhdmVCdXR0b24sIFFQdXNoQnV0\ndG9uI2FwcGx5QnV0dG9uLCBRUHVzaEJ1dHRvbiNhY2NlcHRCdXR0b24sClFQdXNoQnV0dG9uI2Ny\nZWF0ZUJ1dHRvbjEsClFQdXNoQnV0dG9uI2Jyb3dzZUJ1dHRvbnsKCWNvbG9yOiBGT0NVU0NPTE9S\nOwogICAgYmFja2dyb3VuZC1jb2xvcjogRk9DVVNCQUNLR1JPVU5EQ09MT1I7Cn0KClFTcGxpdHRl\ncjo6aGFuZGxlOmhvcml6b250YWwgewoJYmFja2dyb3VuZC1jb2xvcjogcmdiKDI1NSwgMjU1LCAy\nNTUsIDIwKTsKfQoKUVNwbGl0dGVyOjpoYW5kbGU6aG9yaXpvbnRhbDpob3ZlciB7CiAgICBiYWNr\nZ3JvdW5kLWNvbG9yOiBGT0NVU0JBQ0tHUk9VTkRDT0xPUjsKfQoKUUxpc3RWaWV3OjppdGVtIHsK\nCWJvcmRlci1zdHlsZTogc29saWQ7CglvdXRsaW5lOiBub25lOwoJYmFja2dyb3VuZC1jb2xvcjog\ncmdiKDI1NSwgMjU1LCAyNTUsIDI1KTsKCW1hcmdpbjogU1BBQ0lOR3B4IDBweCAwcHggU1BBQ0lO\nR3B4OwoJcGFkZGluZzogIC1TUEFDSU5HcHggMHB4IFBBRERJTkdweCAwcHg7Cglib3JkZXI6IEJP\nUkRFUnB4IHNvbGlkIHJnYigyNTUsIDI1NSwgMjU1LCAyNSk7Cn0KClFMaXN0Vmlldzo6aXRlbTpo\nb3ZlciB7CglvdXRsaW5lOiBub25lOwoJYmFja2dyb3VuZC1jb2xvcjogcmdiKDI1NSwgMjU1LCAy\nNTUsIDQ1KTsKfQoKUUxpc3RWaWV3OjppdGVtOnNlbGVjdGVkLCBRTGlzdFZpZXc6Oml0ZW06c2Vs\nZWN0ZWQ6YWN0aXZlIHsKCWJvcmRlcjogMXB4IHNvbGlkIEZPQ1VTQkFDS0dST1VORENPTE9SOwoJ\nc2hvdy1kZWNvcmF0aW9uLXNlbGVjdGVkOiAxOwp9CgpRTGlzdFZpZXcgewoJb3V0bGluZTogbm9u\nZTsKCWJhY2tncm91bmQtY29sb3I6IHJnYigwLCAwLCAwLCAwKTsKCWJvcmRlcjogMHB4IHNvbGlk\nIHJnYigxODAsIDE4MCwgMTgwLCAxNTApOwoJc2hvdy1kZWNvcmF0aW9uLXNlbGVjdGVkOiAxOyAv\nKiBtYWtlIHRoZSBzZWxlY3Rpb24gc3BhbiB0aGUgZW50aXJlIHdpZHRoIG9mIHRoZSB2aWV3ICov\nCn0KClFUcmVlVmlldyB7CiAgICBvdXRsaW5lOiBub25lOwogICAgYm9yZGVyOiAwcHg7CiAgICBi\nYWNrZ3JvdW5kLWNvbG9yOnJnYigwLCAwLCAwLCAwKTsKfQoKUVRyZWVWaWV3OjppdGVtIHsKCWhl\naWdodDogIDIycHg7Cn0KClFUcmVlVmlldzo6aXRlbTpmb2N1c3sKCWJvcmRlcjogMHB4IHNvbGlk\nIHJnYigyMjAsIDIyMCwgMjIwLCAxODApOwoJb3V0bGluZTogbm9uZTsKfQoKUVRyZWVWaWV3Ojpp\ndGVtOmhvdmVyLApRVHJlZVZpZXc6OmJyYW5jaDpob3ZlciB7Cglib3JkZXI6IDBweCBzb2xpZCBy\nZ2IoMjIwLCAyMjAsIDIyMCwgMTgwKTsKCW91dGxpbmU6IG5vbmU7CgliYWNrZ3JvdW5kLWNvbG9y\nOiBxbGluZWFyZ3JhZGllbnQoeDE6IDAsIHkxOiAwLCB4MjogMCwgeTI6IDEsIHN0b3A6IDAgcmdi\nKDAsMTgwLDI0NSwgMCksIHN0b3A6IDEgcmdiKDAsMTQwLDIzMCwgMCkpOwp9CgpRVHJlZVZpZXc6\nOml0ZW06c2VsZWN0ZWQsIFFUcmVlVmlldzo6aXRlbTpzZWxlY3RlZDphY3RpdmUsClFMaXN0Vmll\ndzo6aXRlbTpzZWxlY3RlZCwgUUxpc3RWaWV3OjppdGVtOnNlbGVjdGVkOmFjdGl2ZSwgUVRyZWVW\naWV3OjpicmFuY2g6c2VsZWN0ZWQgewogICAgYm9yZGVyLXN0eWxlOiBzb2xpZDsKICAgIG91dGxp\nbmU6IG5vbmU7CiAgICBjb2xvcjogRk9SRUdST1VORENPTE9SOwogICAgYmFja2dyb3VuZC1jb2xv\ncjogRk9DVVNCQUNLR1JPVU5EQ09MT1I7Cn0KClFUcmVlVmlldzo6aXRlbTpzZWxlY3RlZCB7CiAg\nICBib3JkZXItbGVmdDogMHB4ICBGT0NVU0JBQ0tHUk9VTkRDT0xPUjsKfQoKUVNsaWRlcjo6Z3Jv\nb3ZlOmhvcml6b250YWwgewogICAgaGVpZ2h0OiAzcHg7IC8qIHRoZSBncm9vdmUgZXhwYW5kcyB0\nbyB0aGUgc2l6ZSBvZiB0aGUgc2xpZGVyIGJ5IGRlZmF1bHQuIGJ5IGdpdmluZyBpdCBhIGhlaWdo\ndCwgaXQgaGFzIGEgZml4ZWQgc2l6ZSAqLwogICAgYmFja2dyb3VuZDogIHJnYigwLDAsMCwwKTsK\nfQoKUVNsaWRlcjo6aGFuZGxlOmhvcml6b250YWwgewoJYmFja2dyb3VuZDogIEZPQ1VTQkFDS0dS\nT1VORENPTE9SOwogICAgd2lkdGg6IDEwcHg7CiAgICBoZWlnaHQ6IDJweDsKICAgIG1hcmdpbjog\nLTRweCAwOyAvKiBoYW5kbGUgaXMgcGxhY2VkIGJ5IGRlZmF1bHQgb24gdGhlIGNvbnRlbnRzIHJl\nY3Qgb2YgdGhlIGdyb292ZS4gRXhwYW5kIG91dHNpZGUgdGhlIGdyb292ZSAqLwogICAgYm9yZGVy\nLXJhZGl1czogNXB4OwogfQoKUVNsaWRlcjo6YWRkLXBhZ2U6aG9yaXpvbnRhbCB7CiAgICBib3Jk\nZXI6IDBweCBzb2xpZCAjOTk5OTk5OwogICAgYmFja2dyb3VuZC1jb2xvcjogcmdiKDAsIDAsIDAs\nIDgwKTsKfQoKUVNsaWRlcjo6c3ViLXBhZ2U6aG9yaXpvbnRhbCB7CiAgICBib3JkZXItdG9wOiAx\ncHggc29saWQgRk9DVVNCQUNLR1JPVU5EQ09MT1I7CiAgICBib3JkZXItYm90dG9tOiAxcHggc29s\naWQgRk9DVVNCQUNLR1JPVU5EQ09MT1I7CiAgICBiYWNrZ3JvdW5kLWNvbG9yOiBGT0NVU0JBQ0tH\nUk9VTkRDT0xPUjsKfQoKUVNjcm9sbEJhcjp2ZXJ0aWNhbCB7Cgl3aWR0aDogU0NST0xMX0JBUl9X\nSURUSHB4Owp9CgpRU2Nyb2xsQmFyOmhvcml6b250YWwgewoJaGVpZ2h0OiBTQ1JPTExfQkFSX1dJ\nRFRIcHg7Cn0KClFTY3JvbGxCYXI6dmVydGljYWwsClFTY3JvbGxCYXI6aG9yaXpvbnRhbHsKCWJv\ncmRlcjogMHB4IHNvbGlkIGdyZXk7CgliYWNrZ3JvdW5kOiAgcmdiKDI1NSwyNTUsIDI1NSwgMCk7\nCgltYXJnaW46IDBweDsKfQoKUVNjcm9sbEJhcjo6aGFuZGxlOnZlcnRpY2FsLApRU2Nyb2xsQmFy\nOjpoYW5kbGU6aG9yaXpvbnRhbHsKCWJhY2tncm91bmQ6ICByZ2IoMjU1LDI1NSwyNTUsNTApOwoJ\nbWluLWhlaWdodDogMHB4Owp9CgpRU2Nyb2xsQmFyOjpoYW5kbGU6dmVydGljYWw6aG92ZXIsClFT\nY3JvbGxCYXI6OmhhbmRsZTpob3Jpem9udGFsOmhvdmVyIHsKCWJhY2tncm91bmQ6ICByZ2IoMjU1\nLDI1NSwyNTUsMTUwKTsKfQoKUVNjcm9sbEJhcjo6YWRkLWxpbmU6dmVydGljYWwsClFTY3JvbGxC\nYXI6OmFkZC1saW5lOmhvcml6b250YWwgewoJYm9yZGVyOiAwcHggc29saWQgZ3JleTsKCWJhY2tn\ncm91bmQ6ICByZ2IoODAsIDgwLCA4MCk7CgloZWlnaHQ6IDBweDsKCXN1YmNvbnRyb2wtcG9zaXRp\nb246IGJvdHRvbTsKCXN1YmNvbnRyb2wtb3JpZ2luOiBtYXJnaW47Cn0KClFTY3JvbGxCYXI6OnN1\nYi1saW5lOnZlcnRpY2FsLApRU2Nyb2xsQmFyOjpzdWItbGluZTpob3Jpem9udGFsIHsKCWJvcmRl\ncjogMHB4IHNvbGlkIGdyZXk7CgliYWNrZ3JvdW5kOiAgcmdiKDgwLCA4MCwgODApOwoJaGVpZ2h0\nOiAwcHg7CglzdWJjb250cm9sLXBvc2l0aW9uOiB0b3A7CglzdWJjb250cm9sLW9yaWdpbjogbWFy\nZ2luOwp9CgpRU2Nyb2xsQmFyOjp1cC1hcnJvdzp2ZXJ0aWNhbCwgUVNjcm9sbEJhcjo6ZG93bi1h\ncnJvdzp2ZXJ0aWNhbCB7Cglib3JkZXI6IDBweCBzb2xpZCBncmV5OwoJd2lkdGg6IDBweDsKCWhl\naWdodDogMHB4OwoJYmFja2dyb3VuZDogd2hpdGU7Cn0KClFTY3JvbGxCYXI6OmFkZC1wYWdlOmhv\ncml6b250YWwsIFFTY3JvbGxCYXI6OmFkZC1wYWdlOnZlcnRpY2FsLCAgUVNjcm9sbEJhcjo6YWRk\nLXBhZ2U6aG9yaXpvbnRhbCwgUVNjcm9sbEJhcjo6c3ViLXBhZ2U6dmVydGljYWwgewoJYmFja2dy\nb3VuZDogbm9uZTsKfQoKU2VhcmNoV2lkZ2V0IHsKCWZvbnQtc2l6ZTogMTZweDsKICAgIGJvcmRl\nci1yYWRpdXM6IDJweDsKCWhlaWdodDogMjdweDsKCWNvbG9yOiByZ2IoMjU1LCAyNTUsIDI1NSwg\nMjEwKTsKICAgIGJvcmRlcjogMHB4IHNvbGlkIHJnYig2MCwgNjAsIDYwLCAyMDApOwogICAgYm9y\nZGVyLXJpZ2h0OiAwcHggc29saWQgcmdiKDE0MCwgMTQwLCAxNDAsIDEwMCk7Cgp9CgpRTGluZUVk\naXQgewoJZm9udC1zaXplOiAxNHB4OwogICAgYm9yZGVyLXJhZGl1czogMHB4OwoJY29sb3I6IHJn\nYigyNTUsIDI1NSwgMjU1LCAyMTApOwogICAgYm9yZGVyOiAwcHggc29saWQgcmdiKDYwLCA2MCwg\nNjAsIDIwMCk7CiAgICBib3JkZXItcmlnaHQ6IDBweCBzb2xpZCByZ2IoMTQwLCAxNDAsIDE0MCwg\nMTAwKTsKCn0KClFQdXNoQnV0dG9uI3NlYXJjaEJ1dHRvbiB7CgloZWlnaHQ6IDI3cHg7Cgl3aWR0\naDogMTBweDsKICAgIGJvcmRlcjogMHB4IHNvbGlkIHJnYig2MCwgNjAsIDYwLCAyMDApOwogICAg\nYm9yZGVyLXJpZ2h0OiAwcHggc29saWQgcmdiKDE0MCwgMTQwLCAxNDAsIDEwMCk7Cgp9CgpRQ29t\nYm9Cb3ggewoJd2lkdGg6IDEwcHg7Cglmb250LXNpemU6IDE0cHg7CiAgICBib3JkZXItcmFkaXVz\nOiAwcHg7CglwYWRkaW5nLWxlZnQ6IDJweDsKCWNvbG9yOiByZ2IoMjU1LCAyNTUsIDI1NSwgMjEw\nKTsKICAgIGJvcmRlcjogMHB4IHNvbGlkIHJnYig2MCwgNjAsIDYwLCAyMDApOwoKfQoKCi8qCkhP\nVkVSCiovClFQdXNoQnV0dG9uOmhvdmVyLCBTZWFyY2hXaWRnZXQ6aG92ZXJ7CiAgICBiYWNrZ3Jv\ndW5kLWNvbG9yOiByZ2JhKDAsIDAsIDAsIDE2MCk7Cn0KClFQdXNoQnV0dG9uOnByZXNzZWQsIFNl\nYXJjaFdpZGdldDpwcmVzc2VkewogICAgYmFja2dyb3VuZC1jb2xvcjogcmdiYSgwLCAwLCAwLCA4\nMCk7Cn0KCgpRTGluZUVkaXQ6Zm9jdXMsIFNlYXJjaFdpZGdldDpmb2N1cyB7CiAgICBib3JkZXI6\nIDJweCBzb2xpZCBGT0NVU0JBQ0tHUk9VTkRDT0xPUjsKfQoKCi8qCldJREdFVCBCQUNLR1JPVU5E\nIEZPQ1VTQkFDS0dST1VORENPTE9SCiovCgpRUHVzaEJ1dHRvbiwgUUxpbmVFZGl0LCBRQ29tYm9C\nb3ggewoJYmFja2dyb3VuZC1jb2xvcjogcmdiYSgwLCAwLCAwLCA4MCk7Cn0KClFQdXNoQnV0dG9u\nI3NlYXJjaEJ1dHRvbiB7CgliYWNrZ3JvdW5kLWNvbG9yOiByZ2JhKDAsIDAsIDAsIDApOwp9CgpJ\nbmZvRnJhbWUgewoJYmFja2dyb3VuZC1jb2xvcjogcmdiYSgwLCAwLCAwKTsKfQoKUUNvbWJvQm94\nOjpkcm9wLWRvd24gewogICAgd2lkdGg6IDFweDsKCWJhY2tncm91bmQtY29sb3I6IHJnYigyNTUs\nIDI1NSwgMjU1LCAwKTsKfQoKUUNvbWJvQm94Ojpkb3duLWFycm93IHsKICAgIHdpZHRoOiAxcHg7\nCglpbWFnZTogIHVybChESVJOQU1FL3VpL2ltYWdlcy9udWxsLnBuZyk7CiAgICBiYWNrZ3JvdW5k\nLWNvbG9yOiByZ2IoMjU1LCAyNTUsIDI1NSwgMCk7Cn0KCgpRTWVudTo6aXRlbSB7Cglib3JkZXI6\nIDFweCBzb2xpZCByZ2IoMCwwLDAsMCk7CglwYWRkaW5nOiAycHggMjVweCAycHggMjBweDsKfQoK\nUU1lbnU6Oml0ZW06c2VsZWN0ZWQgewoJY29sb3I6IEZPQ1VTQ09MT1I7CgliYWNrZ3JvdW5kLWNv\nbG9yOiBGT0NVU0JBQ0tHUk9VTkRDT0xPUjsKfQoKUUNvbWJvQm94IFFBYnN0cmFjdEl0ZW1WaWV3\nIHsKCXNlbGVjdGlvbi1iYWNrZ3JvdW5kLWNvbG9yOiBGT0NVU0JBQ0tHUk9VTkRDT0xPUjsKCXNl\nbGVjdGlvbi1jb2xvcjogcmdiKDI1NSwgMjU1LCAyNTUsIDIxMCk7Cn0KClFNZW51OjpzZXBhcmF0\nb3IsIFFDb21ib0JveCwgUUFic3RyYWN0SXRlbVZpZXc6OnNlcGFyYXRvcnsKCWhlaWdodDogMnB4\nOwoJcGFkZGluZzogMXB4IDFweCAxcHggMXB4Owp9CgpEaWFsb2dGcmFtZSA+IFFXaWRnZXQgewoJ\nYmFja2dyb3VuZC1jb2xvcjogcXJhZGlhbGdyYWRpZW50KHNwcmVhZDpwYWQsIGN4OjAuNSwgY3k6\nMC41LCByYWRpdXM6MC41LCBmeDowLjUsIGZ5OjAuNSwgc3RvcDowIHJnYmEoMCwgMCwgMCwgODEp\nLCBzdG9wOjEgcmdiYSgwLCAwLCAwLCAxNTApKTsKCWJhY2tncm91bmQtY29sb3I6IHFyYWRpYWxn\ncmFkaWVudChzcHJlYWQ6cGFkLCBjeDowLjUsIGN5OjAuNSwgcmFkaXVzOjAuNSwgZng6MC41LCBm\neTowLjUsIHN0b3A6MCByZ2JhKDAsIDAsIDAsIDEwMCksIHN0b3A6MSByZ2JhKDAsIDAsIDAsIDE5\nMCkpOwp9CgpRVHJlZVZpZXc6OmJyYW5jaDpoYXMtY2hpbGRyZW46IWhhcy1zaWJsaW5nczpjbG9z\nZWQsClFUcmVlVmlldzo6YnJhbmNoOmNsb3NlZDpoYXMtY2hpbGRyZW46aGFzLXNpYmxpbmdzIHsK\nICAgIGJvcmRlci1pbWFnZTogbm9uZTsKICAgIGltYWdlOiB1cmwoRElSTkFNRS91aS9pbWFnZXMv\nYnJhbmNoQ2xvc2VkLnBuZyk7Cn0KClFUcmVlVmlldzo6YnJhbmNoOm9wZW46aGFzLWNoaWxkcmVu\nOiFoYXMtc2libGluZ3MsClFUcmVlVmlldzo6YnJhbmNoOm9wZW46aGFzLWNoaWxkcmVuOmhhcy1z\naWJsaW5ncyAgewogICAgYm9yZGVyLWltYWdlOiBub25lOwogICAgaW1hZ2U6IHVybChESVJOQU1F\nL3VpL2ltYWdlcy9icmFuY2hPcGVuLnBuZyk7Cn0KClFMaW5lIHsKCWJhY2tncm91bmQtY29sb3I6\nIHJnYigyNTUsIDE3MCwgMCk7Cn0KClFQdXNoQnV0dG9uOmNoZWNrZWR7Cgljb2xvcjogcmdiKDMw\nLCAzMCwgMzApOwogICAgYmFja2dyb3VuZC1jb2xvcjogRk9DVVNCQUNLR1JPVU5EQ09MT1I7Cn0K\nClFXaWRnZXQjbWVudUZyYW1lewoJYmFja2dyb3VuZC1jb2xvcjogRk9DVVNCQUNLR1JPVU5EQ09M\nT1I7Cn0KCi8qIENIRUNLIEJPWCAqLwpRQ2hlY2tCb3g6OmluZGljYXRvciB7Cgl3aWR0aDogMThw\neDsKCWhlaWdodDogMThweDsKfQoKUU1lbnU6OmluZGljYXRvcjpub24tZXhjbHVzaXZlIHsKCXdp\nZHRoOiAxNHB4OwoJaGVpZ2h0OiAxNHB4OwoJcGFkZGluZy1sZWZ0OiAycHg7Cn0KUUNoZWNrQm94\nOjppbmRpY2F0b3I6Y2hlY2tlZCwgIFFNZW51OjppbmRpY2F0b3I6bm9uLWV4Y2x1c2l2ZTpjaGVj\na2VkIHsKICAgIGltYWdlOiAgdXJsKERJUk5BTUUvdWkvaW1hZ2VzL2NoZWNrZWRPbi5wbmcpCn0K\nUUNoZWNrQm94OjppbmRpY2F0b3I6dW5jaGVja2VkLCAgUU1lbnU6OmluZGljYXRvcjpub24tZXhj\nbHVzaXZlOnVuY2hlY2tlZCAgewogICAgaW1hZ2U6ICB1cmwoRElSTkFNRS91aS9pbWFnZXMvY2hl\nY2tlZE9mZi5wbmcpCn0KUUNoZWNrQm94OjppbmRpY2F0b3I6ZGlzYWJsZWQsICBRTWVudTo6aW5k\naWNhdG9yOm5vbi1leGNsdXNpdmU6ZGlzYWJsZWQgIHsKICAgIGltYWdlOiAgdXJsKERJUk5BTUUv\ndWkvaW1hZ2VzL2NoZWNrZWRPZmYucG5nKQp9CgovKiBSQURJTyBCVVRUT04gKi8KUVJhZGlvQnV0\ndG9uOjppbmRpY2F0b3IgewoJd2lkdGg6IDE4cHg7CgloZWlnaHQ6IDE4cHg7Cn0KUVJhZGlvQnV0\ndG9uOjppbmRpY2F0b3I6Y2hlY2tlZCB7CiAgICBpbWFnZTogIHVybChESVJOQU1FL3VpL2ltYWdl\ncy9yYWRpb09uLnBuZykKfQpRUmFkaW9CdXR0b246OmluZGljYXRvcjp1bmNoZWNrZWQgewogICAg\naW1hZ2U6ICB1cmwoRElSTkFNRS91aS9pbWFnZXMvcmFkaW9PZmYucG5nKQp9CgojbmFtZXNwYWNl\nRWRpdCwgUUNvbWJvQm94LCBRTGluZUVkaXQgewoJaGVpZ2h0OiAyNXB4OwoJcGFkZGluZzogMCA0\ncHg7Cglib3JkZXItcmFkaXVzOiAwcHg7CgliYWNrZ3JvdW5kLWNvbG9yOiByZ2IoMjU1LCAyNTUs\nIDI1NSwgNSk7Cglib3JkZXItYm90dG9tOiAwcHggc29saWQgcmdiKDI1NSwgMjU1LCAyNTUsIDUw\nKTsKfQoKI25hbWVzcGFjZUVkaXQ6Zm9jdXMsIFFDb21ib0JveDpmb2N1cywgUUxpbmVFZGl0OmZv\nY3VzICB7Cglib3JkZXI6IDBweCBzb2xpZCBGT0NVU0JBQ0tHUk9VTkRDT0xPUjsKCWJhY2tncm91\nbmQtY29sb3I6IHJnYigyNTUsIDI1NSwgMjU1LCA1KTsKCWJvcmRlci1ib3R0b206IDJweCBzb2xp\nZCBGT0NVU0JBQ0tHUk9VTkRDT0xPUjsKfQoKCiNuYW1lc3BhY2VFZGl0LCBRQ29tYm9Cb3gsIFFM\naW5lRWRpdCAgewoJc2VsZWN0aW9uLWNvbG9yOiByZ2IoMjU1LCAyNTUsIDI1NSwgMjU1KTsKCXNl\nbGVjdGlvbi1iYWNrZ3JvdW5kLWNvbG9yOiBGT0NVU0JBQ0tHUk9VTkRDT0xPUjsKfQoKCiNuYW1l\nc3BhY2VFZGl0OmhvdmVyLCBRQ29tYm9Cb3g6aG92ZXIsIFFMaW5lRWRpdDpob3ZlciB7CgliYWNr\nZ3JvdW5kLWNvbG9yOiByZ2IoMjU1LCAyNTUsIDI1NSwgMTApOwp9CgoKI3ByZXZpZXdCdXR0b25z\nIFFQdXNoQnV0dG9uIHsKICAgIGhlaWdodDogMzVweDsKCWJvcmRlci1yYWRpdXM6IDBweDsKCWJv\ncmRlcjogMHB4IHNvbGlkIHJnYmEoMCwwLDAsNTApOwoJcGFkZGluZzogMCA4cHg7Cgljb2xvcjog\ncmdiKDI1NSwgMjU1LCAyNTUpOwogICAgYmFja2dyb3VuZC1jb2xvcjogRk9DVVNCQUNLR1JPVU5E\nQ09MT1I7Cn0KCgojcHJldmlld0J1dHRvbnMgUVB1c2hCdXR0b246aG92ZXIgewoJY29sb3I6IHJn\nYigyNTUsIDI1NSwgMjU1LCAxNTApOwp9CgoKUVB1c2hCdXR0b24jdXBkYXRlQnV0dG9uIHsKICAg\nIGhlaWdodDogMjRweDsKICAgIGJvcmRlci1yYWRpdXM6IDFweDsKICAgIGJhY2tncm91bmQtY29s\nb3I6IHJnYigyNTUsIDI1NSwgMjU1LCAyMjApOwoJY29sb3I6IEZPQ1VTQkFDS0dST1VORENPTE9S\nOwp9CgpRUHVzaEJ1dHRvbiN1cGRhdGVCdXR0b246aG92ZXIgewogICAgYmFja2dyb3VuZC1jb2xv\ncjogcmdiKDI1NSwgMjU1LCAyNTUsIDI1NSk7Cn0KCgojbWFpbldpZGdldCB7CiAgICBwYWRkaW5n\nOiAwcHg7CiAgICBtYXJnaW46MHB4Owp9CgojbXlMYWJlbCB7CiAgICBwYWRkaW5nLWxlZnQ6IDVw\neDsKICAgIGJhY2tncm91bmQtY29sb3I6IHRyYW5zcGFyZW50Owp9CgojbWFpbldpZGdldDpob3Zl\nciwgI215TGFiZWw6aG92ZXIgewogICAgYmFja2dyb3VuZDogRk9DVVNCQUNLR1JPVU5EQ09MT1I7\nCiAgICBjb2xvcjogcmdiKDI1NSwgMjU1LCAyNTUpOwp9CgojbXlPcHRpb24gewogICAgY29sb3I6\nIHJnYigwLCAwLCAwLCA1MCk7CiAgICBtYXJnaW46IDFweDsKICAgIGJhY2tncm91bmQtY29sb3I6\nIHJnYigyNTUsIDI1NSwgMjU1LCA1KTsKfQoKI215T3B0aW9uOmhvdmVyIHsKICAgIGNvbG9yOiBG\nT0NVU0JBQ0tHUk9VTkRDT0xPUjsKICAgIGJhY2tncm91bmQtY29sb3I6IHJnYigyNTUsIDI1NSwg\nMjU1LCAyMjApOwp9\n'
 if __name__ == '__main__':
-    import studioLibrary
-    studioLibrary.main()
+    import studiolibrary
+    studiolibrary.main()
