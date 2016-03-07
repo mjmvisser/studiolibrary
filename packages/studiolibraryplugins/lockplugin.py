@@ -1,86 +1,111 @@
-#!/usr/bin/python
-"""
-"""
+# Copyright 2016 by Kurt Rathjen. All Rights Reserved.
+#
+# Permission to use, modify, and distribute this software and its
+# documentation for any purpose and without fee is hereby granted,
+# provided that the above copyright notice appear in all copies and that
+# both that copyright notice and this permission notice appear in
+# supporting documentation, and that the name of Kurt Rathjen
+# not be used in advertising or publicity pertaining to distribution
+# of the software without specific, written prior permission.
+# KURT RATHJEN DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING
+# ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL
+# KURT RATHJEN BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR
+# ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+# OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
 import re
+
 import studiolibrary
+import studiolibraryplugins
 
 
 class Plugin(studiolibrary.Plugin):
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         """
-        @type args: 
+        :type args:
         """
-        studiolibrary.Plugin.__init__(self, *args)
+        studiolibrary.Plugin.__init__(self, *args, **kwargs)
+
+        iconPath = studiolibraryplugins.resource().get("icons", "lock.png")
+
         self.setName("lock")  # Must set a name for the plugin
-        self.setIcon(self.dirname() + "/images/lock.png")
+        self.setIconPath(iconPath)
 
-        # Check what kwargs were used in the studiolibrary.main() function
-        self._superusers = self.window().kwargs().get("superusers", [])
-        self._lockFolder = re.compile(self.window().kwargs().get("lockFolder", ""))
-        self._unlockFolder = re.compile(self.window().kwargs().get("unlockFolder", ""))
+        self._superusers = []
+        self._lockFolder = re.compile("")
+        self._unlockFolder = re.compile("")
 
-    # Override the load method so that it doesn't show in the "+" new menu
+    def newAction(self, parent=None):
+        """
+        Overriding this method so that it doesn't show in the "+" new menu.
+        """
+        pass
+
     def load(self):
         """
+        Check what kwargs were used in the studiolibrary.main() function
         """
-        self.updateLock()
+        self._superusers = self.library().kwargs().get("superusers", [])
+        self._lockFolder = re.compile(self.library().kwargs().get("lockFolder", ""))
+        self._unlockFolder = re.compile(self.library().kwargs().get("unlockFolder", ""))
 
     def folderSelectionChanged(self, itemSelection1, itemSelection2):
         """
-        @type itemSelection1: 
-        @type itemSelection2: 
+        :type itemSelection1:
+        :type itemSelection2:
         """
         self.updateLock()
 
-    # Unlock for all superusers
     def updateLock(self):    
         """
-        @rtype: None
+        :rtype: None
         """
         if studiolibrary.user() in self._superusers or []:
-            self.window().setLocked(False)
+            self.libraryWidget().setLocked(False)
             return
 
         if self._lockFolder.match("") and self._unlockFolder.match(""):
             if self._superusers:  # Lock if only the superusers arg is used
-                self.window().setLocked(True)
+                self.libraryWidget().setLocked(True)
             else:  # Unlock if no keyword arguments are used
-                self.window().setLocked(False)
+                self.libraryWidget().setLocked(False)
             return
 
-        folders = self.window().selectedFolders()
+        folders = self.libraryWidget().selectedFolders()
 
         # Lock the selected folders that match the self._lockFolder regx
         if not self._lockFolder.match(""):
             for folder in folders or []:
-                if self._lockFolder.search(folder.dirname()):
-                    self.window().setLocked(True)
+                if self._lockFolder.search(folder.path()):
+                    self.libraryWidget().setLocked(True)
                     return
-            self.window().setLocked(False)
+            self.libraryWidget().setLocked(False)
 
         # Unlock the selected folders that match the self._unlockFolder regx
         if not self._unlockFolder.match(""):
             for folder in folders or []:
-                if self._unlockFolder.search(folder.dirname()):
-                    self.window().setLocked(False)
+                if self._unlockFolder.search(folder.path()):
+                    self.libraryWidget().setLocked(False)
                     return
-            self.window().setLocked(True)
+            self.libraryWidget().setLocked(True)
 
 
-if __name__ == "__main__":
+def example():
 
-    import studiolibrary
-    #root = "P:/figaro/studiolibrary/anim"
-    #name = "Figaro Pho - Anim"
-    superusers = ["kurt.rathjen"]
     plugins = ["examplePlugin"]
+    superusers = ["kurt.rathjen"]
 
     # Lock all folders unless you're a superuser.
     studiolibrary.main(superusers=superusers, plugins=plugins, add=True)
 
     # This command will lock only folders that contain the word "Approved" in their path.
-    #studiolibrary.main(name=name, root=root, superusers=superusers, lockFolder="Approved")
+    # studiolibrary.main(name=name, root=root, superusers=superusers, lockFolder="Approved")
 
     # This command will lock all folders except folders that contain the words "Users" or "Shared" in their path.
-    #studiolibrary.main(name=name, root=root, superusers=superusers, unlockFolder="Users|Shared")
+    # studiolibrary.main(name=name, root=root, superusers=superusers, unlockFolder="Users|Shared")
+
+
+if __name__ == "__main__":
+    example()

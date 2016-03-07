@@ -1,59 +1,60 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.6.14/build27/studiolibrary/packages/mutils\decorators.py
-"""
-# Released subject to the BSD License
-# Please visit http://www.voidspace.org.uk/python/license.shtml
-#
-# Copyright (c) 2014, Kurt Rathjen
-# All rights reserved.
-# Comments, suggestions and bug reports are welcome.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-   # * Redistributions of source code must retain the above copyright
-   #   notice, this list of conditions and the following disclaimer.
-   # * Redistributions in binary form must reproduce the above copyright
-   # notice, this list of conditions and the following disclaimer in the
-   # documentation and/or other materials provided with the distribution.
-   # * Neither the name of Kurt Rathjen nor the
-   # names of its contributors may be used to endorse or promote products
-   # derived from this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY KURT RATHJEN ''AS IS'' AND ANY
-# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL KURT RATHJEN BE LIABLE FOR ANY
-# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-"""
-__author__ = 'kurt.rathjen'
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary/packages/mutils\decorators.py
 import time
-import mutils
-log = mutils.logger
+import logging
 try:
     import maya.cmds
-except ImportError as e:
+except ImportError:
     import traceback
     traceback.print_exc()
 
+logger = logging.getLogger(__name__)
+__all__ = ['timing',
+ 'unifyUndo',
+ 'disableUndo',
+ 'disableViews',
+ 'disableAutoKey',
+ 'showWaitCursor',
+ 'restoreSelection',
+ 'restoreCurrentTime']
+
 def timing(fn):
-    """
-    Decorator!
-    @type fn: func
-    @rtype:
-    """
 
     def wrapped(*args, **kwargs):
         time1 = time.time()
         ret = fn(*args, **kwargs)
         time2 = time.time()
-        log.debug('%s function took %0.5f sec' % (fn.func_name, time2 - time1))
+        logger.debug('%s function took %0.5f sec' % (fn.func_name, time2 - time1))
         return ret
 
+    return wrapped
+
+
+def unifyUndo(fn):
+
+    def wrapped(*args, **kwargs):
+        maya.cmds.undoInfo(openChunk=True)
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            maya.cmds.undoInfo(closeChunk=True)
+
+    wrapped.__name__ = fn.__name__
+    wrapped.__doc__ = fn.__doc__
+    return wrapped
+
+
+def disableUndo(fn):
+
+    def wrapped(*args, **kwargs):
+        initialUndoState = maya.cmds.undoInfo(q=True, state=True)
+        maya.cmds.undoInfo(stateWithoutFlush=False)
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            maya.cmds.undoInfo(stateWithoutFlush=initialUndoState)
+
+    wrapped.__name__ = fn.__name__
+    wrapped.__doc__ = fn.__doc__
     return wrapped
 
 
@@ -95,35 +96,6 @@ def restoreCurrentTime(fn):
             return fn(*args, **kwargs)
         finally:
             maya.cmds.currentTime(initialTime, edit=True)
-
-    wrapped.__name__ = fn.__name__
-    wrapped.__doc__ = fn.__doc__
-    return wrapped
-
-
-def unifyUndo(fn):
-
-    def wrapped(*args, **kwargs):
-        maya.cmds.undoInfo(openChunk=True)
-        try:
-            return fn(*args, **kwargs)
-        finally:
-            maya.cmds.undoInfo(closeChunk=True)
-
-    wrapped.__name__ = fn.__name__
-    wrapped.__doc__ = fn.__doc__
-    return wrapped
-
-
-def disableUndo(fn):
-
-    def wrapped(*args, **kwargs):
-        initialUndoState = maya.cmds.undoInfo(q=True, state=True)
-        maya.cmds.undoInfo(stateWithoutFlush=False)
-        try:
-            return fn(*args, **kwargs)
-        finally:
-            maya.cmds.undoInfo(stateWithoutFlush=initialUndoState)
 
     wrapped.__name__ = fn.__name__
     wrapped.__doc__ = fn.__doc__

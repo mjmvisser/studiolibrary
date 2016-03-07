@@ -1,39 +1,8 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.6.14/build27/studiolibrary/packages/mutils\node.py
-"""
-# Released subject to the BSD License
-# Please visit http://www.voidspace.org.uk/python/license.shtml
-#
-# Copyright (c) 2014, Kurt Rathjen
-# All rights reserved.
-# Comments, suggestions and bug reports are welcome.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-   # * Redistributions of source code must retain the above copyright
-   #   notice, this list of conditions and the following disclaimer.
-   # * Redistributions in binary form must reproduce the above copyright
-   # notice, this list of conditions and the following disclaimer in the
-   # documentation and/or other materials provided with the distribution.
-   # * Neither the name of Kurt Rathjen nor the
-   # names of its contributors may be used to endorse or promote products
-   # derived from this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY KURT RATHJEN ''AS IS'' AND ANY
-# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL KURT RATHJEN BE LIABLE FOR ANY
-# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-"""
-__author__ = 'kurt.rathjen'
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary/packages/mutils\node.py
+import mutils
 try:
     import maya.cmds
-except ImportError as e:
+except Exception:
     import traceback
     traceback.print_exc()
 
@@ -41,8 +10,8 @@ class Node(object):
 
     def __init__(self, name, attributes = None):
         """
-        @type attributes: [Attribute]
-        @type name: str
+        :type attributes: [Attribute]
+        :type name: str
         """
         try:
             self._name = name.encode('ascii')
@@ -59,26 +28,28 @@ class Node(object):
 
     def name(self):
         """
-        @rtype: str
+        :rtype: str
         """
         return self._name
 
     def attributes(self):
         """
-        @rtype: str
+        :rtype: str
         """
         return self._attributes
 
     def shortname(self):
         """
-        @rtype: str
+        :rtype: str
         """
         if self._shortname is None:
             self._shortname = self.name().split('|')[-1]
         return self._shortname
 
     def toShortName(self):
-        import mutils
+        """
+        :rtype: None
+        """
         names = maya.cmds.ls(self.shortname())
         if len(names) == 1:
             return Node(names[0])
@@ -89,7 +60,7 @@ class Node(object):
 
     def namespace(self):
         """
-        @rtype: str
+        :rtype: str
         """
         if self._namespace is None:
             self._namespace = ':'.join(self.shortname().split(':')[:-1])
@@ -107,25 +78,25 @@ class Node(object):
 
     def exists(self):
         """
-        @rtype: bool
+        :rtype: bool
         """
         return maya.cmds.objExists(self.name())
 
     def isLong(self):
         """
-        @rtype: bool
+        :rtype: bool
         """
         return '|' in self.name()
 
     def isReferenced(self):
         """
-        @rtype: bool
+        :rtype: bool
         """
         return maya.cmds.referenceQuery(self.name(), isNodeReferenced=True)
 
     def setMirrorAxis(self, mirrorAxis):
         """
-        @type mirrorAxis: list[int]
+        :type mirrorAxis: list[int]
         """
         self._mirrorAxis = mirrorAxis
 
@@ -139,7 +110,7 @@ class Node(object):
         setNamespace("", "|character:group|character:control")
         result: |group|control
         
-        @type namespace: str
+        :type namespace: str
         """
         if namespace == self.namespace():
             return
@@ -159,7 +130,7 @@ class Node(object):
     def ls(cls, objects = None, selection = False):
         """
         nodes = Node.ls(selection=True)
-        @rtype: list[Node]
+        :rtype: list[Node]
         """
         if objects is None and not selection:
             objects = maya.cmds.ls()

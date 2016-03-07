@@ -1,4 +1,4 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.6.14/build27/studiolibrary\other\utils.py
+#Embedded file name: /automount/sun-01/home/mvisser/workspace/studiolibrary/other/utils.py
 """
 """
 import os

@@ -1,4 +1,4 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.6.14/build27/studiolibrary\other\analytics.py
+#Embedded file name: /automount/sun-01/home/mvisser/workspace/studiolibrary/other/analytics.py
 """
 Released subject to the BSD License
 Please visit http://www.voidspace.org.uk/python/license.shtml
@@ -73,7 +73,6 @@ class Analytics:
         try:
             if self.isEnabled():
                 url = self._url + '&t=event&ec=' + name + '&ea=' + value
-                #self.send(url)
         except Exception:
             pass
 
@@ -84,7 +83,6 @@ class Analytics:
         try:
             if self.isEnabled():
                 url = self._url + '&t=appview&cd=' + name
-                #self.send(url)
         except Exception:
             pass
 

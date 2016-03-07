@@ -1,19 +1,21 @@
-//Maya ASCII 2014 scene
+//Maya ASCII 2016 scene
 //Name: animation.ma
-//Last modified: Sat, Mar 14, 2015 04:34:42 AM
+//Last modified: Sun, Feb 07, 2016 08:17:45 PM
 //Codeset: 1252
-requires maya "2014";
+requires maya "2016";
 currentUnit -l centimeter -a degree -t film;
 fileInfo "application" "maya";
-fileInfo "product" "Maya 2014";
-fileInfo "version" "2014 x64";
-fileInfo "cutIdentifier" "201303010241-864206";
-fileInfo "osv" "Microsoft Windows 7 Ultimate Edition, 64-bit Windows 7 Service Pack 1 (Build 7601)\n";
+fileInfo "product" "Maya 2016";
+fileInfo "version" "2016";
+fileInfo "cutIdentifier" "201502261600-953408";
+fileInfo "osv" "Microsoft Windows 8 Business Edition, 64-bit  (Build 9200)\n";
 createNode animCurveTU -n "CURVE1";
+	rename -uid "8D6F3C23-4323-B315-6912-3EB16A1B7404";
 	setAttr ".tan" 18;
 	setAttr ".wgt" no;
 	setAttr -s 2 ".ktv[0:1]"  1 0 10 10;
 createNode animCurveTU -n "CURVE2";
+	rename -uid "7FE5C5CB-417B-55BC-37EF-FF8BCF0885FE";
 	setAttr ".tan" 18;
 	setAttr ".wgt" no;
 	setAttr -s 10 ".ktv[0:9]"  1 8 2 8 3 8 4 8 5 8 6 8 7 8 8 8 9 8 10 8;

@@ -1,35 +1,4 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.6.14/build27/studiolibrary/packages/mutils\tests\test_pose.py
-"""
-# Released subject to the BSD License
-# Please visit http://www.voidspace.org.uk/python/license.shtml
-#
-# Copyright (c) 2014, Kurt Rathjen
-# All rights reserved.
-# Comments, suggestions and bug reports are welcome.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-   # * Redistributions of source code must retain the above copyright
-   #   notice, this list of conditions and the following disclaimer.
-   # * Redistributions in binary form must reproduce the above copyright
-   # notice, this list of conditions and the following disclaimer in the
-   # documentation and/or other materials provided with the distribution.
-   # * Neither the name of Kurt Rathjen nor the
-   # objects of its contributors may be used to endorse or promote products
-   # derived from this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY KURT RATHJEN  ''AS IS'' AND ANY
-# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL KURT RATHJEN BE LIABLE FOR ANY
-# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-"""
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary/packages/mutils\tests\test_pose.py
 import os
 import mutils
 import maya.cmds
@@ -48,7 +17,7 @@ class TestPose(test_base.TestBase):
         Test save pose.
         """
         self.open()
-        pose = mutils.Pose.createFromObjects(self.srcObjects)
+        pose = mutils.Pose.fromObjects(self.srcObjects)
         pose.save(self.dstPath)
 
     def test_load(self):
@@ -56,7 +25,7 @@ class TestPose(test_base.TestBase):
         Test load types.
         """
         self.open()
-        pose = mutils.Pose.createFromPath(self.dstPath)
+        pose = mutils.Pose.fromPath(self.dstPath)
         pose.load(self.dstObjects)
         for srcAttribute, dstAttribute in self.listAttr():
             self.assertEqual(srcAttribute.value(), dstAttribute.value(), 'Incorrect value for %s %s != %s' % (dstAttribute.fullname(), dstAttribute.value(), srcAttribute.value()))
@@ -66,7 +35,7 @@ class TestPose(test_base.TestBase):
         """
         srcPath = os.path.join(self.dataDir(), 'test_older_version.dict')
         dstPath = os.path.join(self.dataDir(), 'test_older_version.json')
-        pose = mutils.Pose.createFromPath(srcPath)
+        pose = mutils.Pose.fromPath(srcPath)
         print pose.objects()
 
     def test_non_unique_names(self):
@@ -77,9 +46,9 @@ class TestPose(test_base.TestBase):
         srcObjects = ['srcSphere:lockedNode', 'srcSphere:offset', 'srcSphere:sphere']
         dstObjects = ['lockedNode', 'offset', 'sphere']
         self.open(path=srcPath)
-        pose = mutils.Pose.createFromObjects(srcObjects)
+        pose = mutils.Pose.fromObjects(srcObjects)
         pose.save(dstPath)
-        pose = mutils.Pose.createFromPath(dstPath)
+        pose = mutils.Pose.fromPath(dstPath)
         pose.load(dstObjects)
         for srcAttribute, dstAttribute in self.listAttr(srcObjects, dstObjects):
             self.assertEqual(srcAttribute.value(), dstAttribute.value(), 'Incorrect value for %s %s != %s' % (dstAttribute.fullname(), dstAttribute.value(), srcAttribute.value()))
@@ -98,7 +67,7 @@ class TestPose(test_base.TestBase):
                 if srcAttribute.type == 'float':
                     dstObjects[dstAttribute.fullname()] = (srcAttribute.value(), dstAttribute.value())
 
-            pose = mutils.Pose.createFromPath(self.dstPath)
+            pose = mutils.Pose.fromPath(self.dstPath)
             pose.load(self.dstObjects, blend=blend)
             for dstFullname in dstObjects.keys():
                 srcValue, dstValue = dstObjects[dstFullname]
@@ -111,7 +80,7 @@ class TestPose(test_base.TestBase):
         Test select content
         """
         self.open()
-        pose = mutils.Pose.createFromPath(self.dstPath)
+        pose = mutils.Pose.fromPath(self.dstPath)
         pose.select(namespaces=self.dstNamespaces)
         selection = maya.cmds.ls(selection=True)
         for dstName in self.dstObjects:
@@ -124,5 +93,5 @@ class TestPose(test_base.TestBase):
         Test select content
         """
         self.open()
-        pose = mutils.Pose.createFromPath(self.dstPath)
+        pose = mutils.Pose.fromPath(self.dstPath)
         self.assertEqual(pose.count(), len(self.srcObjects))

@@ -1,17 +1,28 @@
-#!/usr/bin/python
-"""
-"""
+# Copyright 2016 by Kurt Rathjen. All Rights Reserved.
+#
+# Permission to use, modify, and distribute this software and its
+# documentation for any purpose and without fee is hereby granted,
+# provided that the above copyright notice appear in all copies and that
+# both that copyright notice and this permission notice appear in
+# supporting documentation, and that the name of Kurt Rathjen
+# not be used in advertising or publicity pertaining to distribution
+# of the software without specific, written prior permission.
+# KURT RATHJEN DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING
+# ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL
+# KURT RATHJEN BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR
+# ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+# IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+# OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
 import os
 import mutils
-import studiolibrary
-import mayabaseplugin
 
-try:
-    from PySide import QtGui
-    from PySide import QtCore
-except ImportError:
-    from PyQt4 import QtGui
-    from PyQt4 import QtCore
+from PySide import QtGui
+
+import studiolibrary
+import studiolibraryplugins
+
+from studiolibraryplugins import mayabaseplugin
 
 
 class PluginError(Exception):
@@ -21,25 +32,62 @@ class PluginError(Exception):
 
 class Plugin(mayabaseplugin.Plugin):
 
-    def __init__(self, parent):
+    @staticmethod
+    def settings():
         """
-        @type parent: QtGui.QWidget
+        :rtype: studiolibrary.Settings
         """
-        mayabaseplugin.Plugin.__init__(self, parent)
+        return studiolibrary.Settings.instance("Plugin", "Selection Set")
+
+    def __init__(self, library):
+        """
+        :type library: studiolibrary.Library
+        """
+        mayabaseplugin.Plugin.__init__(self, library)
+
+        iconPath = studiolibraryplugins.resource().get("icons", "selectionSet.png")
 
         self.setName("Selection Set")
-        self.setIcon(self.dirname() + "/images/set.png")
+        self.setIconPath(iconPath)
         self.setExtension("set")
 
-        self.setRecord(Record)
-        self.setInfoWidget(SelectionSetInfoWidget)
-        self.setCreateWidget(SelectionSetCreateWidget)
-        self.setPreviewWidget(SelectionSetPreviewWidget)
+    def record(self, path=None):
+        """
+        :type path: str or None
+        :rtype: Record
+        """
+        return Record(path=path, plugin=self)
+
+    def infoWidget(self, parent, record):
+        """
+        :type parent: QtGui.QWidget
+        :type record: Record
+        :rtype: SelectionSetInfoWidget
+        """
+        return SelectionSetInfoWidget(parent=parent, record=record)
+
+    def createWidget(self, parent):
+        """
+        :type parent: QtGui.QWidget
+        :rtype: SelectionSetCreateWidget
+        """
+        record = self.record()
+        return SelectionSetCreateWidget(parent=parent, record=record)
+
+    def previewWidget(self, parent, record):
+        """
+        :type parent: QtGui.QWidget
+        :type record: Record
+        :rtype: SelectionSetPreviewWidget
+        """
+        return SelectionSetPreviewWidget(parent=parent, record=record)
 
 
 class Record(mayabaseplugin.Record):
+
     def __init__(self, *args, **kwargs):
         """
+        :rtype: None
         """
         mayabaseplugin.Record.__init__(self, *args, **kwargs)
         self.setTransferBasename("set.json")
@@ -49,43 +97,63 @@ class Record(mayabaseplugin.Record):
         if not os.path.exists(self.transferPath()):
             self.setTransferBasename("set.json")
 
-    def load(self):
+    def settings(self):
         """
+        :rtype: studiolibrary.Settings
         """
-        self.selectSelectionSet()
+        return Plugin.settings()
+
+    def doubleClicked(self):
+        """
+        :rtype: None
+        """
+        self.loadFromSettings()
+
+    def loadFromSettings(self):
+        """
+        :rtype: None
+        """
+        namespaces = self.namespaces()
+        self.load(namespaces=namespaces)
+
+    def load(self, namespaces=None):
+        """
+        :type namespaces: list[str] | None
+        """
+        self.selectContent(namespaces=namespaces)
 
 
 class SelectionSetInfoWidget(mayabaseplugin.InfoWidget):
 
     def __init__(self, *args, **kwargs):
         """
-        @type parent: QtGui.QWidget
-        @type record: Record
+        :type parent: QtGui.QWidget
+        :type record: Record
         """
         mayabaseplugin.InfoWidget.__init__(self, *args, **kwargs)
-        studiolibrary.loadUi(self)
 
 
 class SelectionSetPreviewWidget(mayabaseplugin.PreviewWidget):
 
     def __init__(self, *args, **kwargs):
         """
-        @type parent: QtGui.QWidget
-        @type record: Record
+        :type parent: QtGui.QWidget
+        :type record: Record
         """
         mayabaseplugin.PreviewWidget.__init__(self, *args, **kwargs)
+
+    def accept(self):
+        """
+        :rtype: None
+        """
+        self.record().loadFromSettings()
 
 
 class SelectionSetCreateWidget(mayabaseplugin.CreateWidget):
 
     def __init__(self, *args, **kwargs):
         """
-        @type parent: QtGui.QWidget
-        @type record: Record
+        :type parent: QtGui.QWidget
+        :type record: Record
         """
         mayabaseplugin.CreateWidget.__init__(self, *args, **kwargs)
-
-
-if __name__ == "__main__":
-    import studiolibrary
-    studiolibrary.main()

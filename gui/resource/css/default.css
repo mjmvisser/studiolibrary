@@ -1,0 +1,382 @@
+/*
+STYLE SHEET
+*/
+QWidget {
+	border: 0px;
+	color: rgb(220, 220, 220, 255);
+}
+
+QWidget {
+	border: 0px;
+	color: rgb(220, 220, 220, 255);
+	background-color: BACKGROUND_COLOR;
+}
+
+
+QWidget:disabled {
+	color: rgb(255, 255, 255, 80);
+}
+
+QMenu::separator, QTreeView::item:hover,
+QTreeView::branch:hover {
+	background-color: rgb(255, 255, 255, 100);
+}
+
+
+QTreeView::branch:selected, QPushButton, QWidget#menuFrame,
+QFrame#headerFrame > QWidget, QFrame#headerFrame, QMenu::item:selected {
+    color: rgb(255, 255, 255, 255);
+    background-color: ACCENT_COLOR;
+}
+
+QTreeView::item:selected, QTreeView::item:selected:active,
+QListView::item:selected, QListView::item:selected:active {
+    color: rgb(255, 255, 255, 255);
+    background-color: ACCENT_COLOR;
+}
+
+
+/*
+DIALOG
+*/
+QMessageBox QPushButton, QDialog QPushButton  {
+    width: 100px;
+    height: 32px;
+}
+
+
+/*
+BUTTON
+*/
+QPushButton:hover {
+	background-color: rgb(ACCENT_COLOR_R, ACCENT_COLOR_G, ACCENT_COLOR_B, 230);
+}
+
+QPushButton#updateButton {
+	color: ACCENT_COLOR;
+    height: 24px;
+    border-radius: 1px;
+    background-color: rgb(255, 255, 255, 220);
+}
+
+QPushButton#updateButton:hover {
+    background-color: rgb(255, 255, 255, 255);
+}
+
+
+/*
+SLIDER
+*/
+QSlider::groove:horizontal {
+    height: 3px; /* the groove expands to the size of the slider by default. by giving it a height, it has a fixed size */
+    background: rgb(0,0,0,0);
+}
+
+QSlider::handle:horizontal {
+	background: ACCENT_COLOR;
+    width: 10px;
+    height: 2px;
+    margin: -4px 0; /* handle is placed by default on the contents rect of the groove. Expand outside the groove */
+    border-radius: 5px;
+ }
+
+QSlider::add-page:horizontal {
+    border: 0px solid #999999;
+    background-color: rgb(255, 255, 255, 50);
+}
+
+QSlider::sub-page:horizontal {
+    background-color: ACCENT_COLOR;
+    border-top: 1px solid ACCENT_COLOR;
+    border-bottom: 1px solid ACCENT_COLOR;
+}
+
+
+
+/*
+SCROLLBAR
+*/
+QScrollBar:vertical {
+	width: 10px;
+}
+
+QScrollBar:horizontal {
+	height: 10px;
+}
+
+QScrollBar:vertical,
+QScrollBar:horizontal{
+	margin: 0px;
+	border: 0px solid grey;
+	background: rgb(255, 255, 255, 0);
+}
+
+QScrollBar::handle:vertical,
+QScrollBar::handle:horizontal{
+	min-height: 0px;
+	background: rgb(255,255, 255, 50);
+}
+
+QScrollBar::handle:vertical:hover,
+QScrollBar::handle:horizontal:hover {
+	background: rgb(255,255, 255, 100);
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::add-line:horizontal {
+	height: 0px;
+	border: 0px solid grey;
+	subcontrol-origin: margin;
+	subcontrol-position: bottom;
+	background: rgb(80, 80, 80);
+}
+
+QScrollBar::sub-line:vertical,
+QScrollBar::sub-line:horizontal {
+	height: 0px;
+	border: 0px solid grey;
+	subcontrol-position: top;
+	subcontrol-origin: margin;
+	background: rgb(80, 80, 80);
+}
+
+QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {
+	width: 0px;
+	height: 0px;
+	border: 0px;
+	background: white;
+}
+
+QScrollBar::add-page:horizontal, QScrollBar::add-page:vertical,
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:vertical {
+	background: none;
+}
+
+
+
+/*
+LIST
+*/
+QAbstractItemView::separator{
+	height: 0px;
+	padding: 0px 0px 0px 0px;
+	background-color: rgb(255, 255, 255, 0);
+}
+
+QListView::item, QTreeView::item {
+	border: 0px;
+	outline: none;
+	border-style: solid;
+	margin: 0px 0px 0px 0px;
+	padding: 0px 0px 0px 0px;
+	background-color: BACKGROUND_COLOR;
+}
+
+QTreeView, QListView, QPushButton {
+    border: 0px;
+    outline: none;
+}
+
+QTreeView::item, QTreeView::branch {
+	height: 22px;
+	show-decoration-selected: 1; /* make the selection span the entire width of the view */
+	background-color: BACKGROUND_COLOR;
+}
+
+QTreeView::item:focus{
+	border: 0px;
+	outline: none;
+}
+
+QTreeView::branch:has-children:!has-siblings:closed,
+QTreeView::branch:closed:has-children:has-siblings {
+    border-image: none;
+    image: url(RESOURCE_DIRNAME/icons/branch_closed.png);
+}
+
+QTreeView::branch:open:has-children:!has-siblings,
+QTreeView::branch:open:has-children:has-siblings  {
+    border-image: none;
+    image: url(RESOURCE_DIRNAME/icons/branch_open.png);
+}
+
+QListView::item {
+	background-color: rgb(20, 20, 20, 0);
+}
+
+
+
+
+QCheckBox::indicator, QRadioButton::indicator  {
+	width: 18px;
+	height: 18px;
+}
+
+QRadioButton::indicator:checked {
+    image: url(RESOURCE_DIRNAME/icons/radio_button_checked.png)
+}
+
+QRadioButton::indicator:unchecked {
+    image: url(RESOURCE_DIRNAME/icons/radio_button_unchecked.png)
+}
+
+QCheckBox::indicator:checked, QMenu::indicator:non-exclusive:checked {
+    image: url(RESOURCE_DIRNAME/icons/check_box_checked.png)
+}
+
+QCheckBox::indicator:unchecked, QMenu::indicator:non-exclusive:unchecked  {
+    image: url(RESOURCE_DIRNAME/icons/check_box_unchecked.png)
+}
+
+QCheckBox::indicator:disabled, QMenu::indicator:non-exclusive:disabled  {
+    image: url(RESOURCE_DIRNAME/icons/check_box_unchecked.png)
+}
+
+
+
+/*
+MENU ITEM
+*/
+QMenu, #actionLabel, #sliderActionLabel {
+	font: 11pt;
+}
+
+
+QMenu  {
+	border: 1px solid BACKGROUND_COLOR;
+}
+
+QMenu::item {
+	border: 1px solid rgb(0, 0, 0, 0);
+	padding: 2px 25px 2px 20px;
+}
+
+QMenu::separator {
+	height: 1px;
+	padding: 0px 1px 0px 1px;
+	background-color: rgb(255, 255, 255, 20);
+}
+
+QMenu::indicator:non-exclusive {
+	width: 14px;
+	height: 14px;
+	padding-left: 2px;
+}
+
+/*
+CUSTOM SLIDER ACTION
+*/
+#sliderActionLabel {
+	padding-left: 15px;
+}
+
+/*
+CUSTOM MENU OPTION
+*/
+#actionWidget {
+    margin: 0px;
+    padding: 0px;
+}
+
+#actionLabel {
+    padding-left: 5px;
+    background-color: transparent;
+}
+
+#actionWidget:hover, #actionWidget:focus, #actionLabel:hover {
+    background: ACCENT_COLOR;
+    color: rgb(255, 255, 255);
+}
+
+#actionOption {
+    color: rgb(0, 0, 0, 50);
+    margin: 1px;
+    background-color: rgb(255, 255, 255, 5);
+}
+
+#actionOption:hover {
+    color: ACCENT_COLOR;
+    background-color: rgb(255, 255, 255, 220);
+}
+
+QSplitter::handle:horizontal {
+	background-color: rgb(255, 255, 255, 20);
+}
+
+QSplitter::handle:horizontal:hover {
+    background-color: ACCENT_COLOR;
+}
+
+/*
+COMBOBOX & LINE EDIT
+*/
+QComboBox {
+	width: 10px;
+    border: 0px;
+	padding-left: 2px;
+    border-radius: 0px;
+	background-color: rgb(255, 255, 255, 15);
+}
+
+QComboBox::drop-down {
+    width: 1px;
+	background-color: rgb(255, 255, 255, 0);
+}
+
+QComboBox::down-arrow {
+    width: 1px;
+	image: url(RESOURCE_DIRNAME/icons/null.png);
+    background-color: rgb(255, 255, 255, 0);
+}
+
+QComboBox, QLineEdit, QComboBox QAbstractItemView:item {
+	height: 25px;
+	padding: 0 4px;
+	font-size: 11pt;
+	border-radius: 0px;
+	background-color: rgb(255, 255, 255, 15);
+	border-bottom: 0px solid rgb(255, 255, 255, 50);
+	selection-color: rgb(255, 255, 255, 230);
+	selection-background-color: ACCENT_COLOR;
+}
+
+#searchEdit {
+	color: rgb(255, 255, 255);
+	background-color: rgb(255, 255, 255, 15);
+	selection-color: ACCENT_COLOR;
+	selection-background-color: rgb(255, 255, 255, 230);
+}
+#searchEdit:focus {
+	color: rgb(255, 255, 255);
+	background-color: rgb(255, 255, 255, 50);
+}
+
+
+ComboBox:focus, QLineEdit:focus {
+	border: 0px;
+	border-bottom: 2px solid ACCENT_COLOR;
+	background-color: rgb(255, 255, 255, 30);
+}
+
+QComboBox QAbstractItemView {
+	selection-background-color: ACCENT_COLOR;
+	selection-color: rgb(255, 255, 255, 210);
+}
+
+QComboBox QAbstractItemView::item {
+}
+
+
+SearchWidget {
+	background-color: rgb(255, 255, 255, 250);
+	border-radius: 2px;
+}
+
+SearchWidget QPushButton {
+	background-color: rgb(255, 255, 255, 250);
+}
+
+SearchWidget QLineEdit {
+	font-size: 11pt;
+	color: rgb(0, 0, 0, 200);
+}

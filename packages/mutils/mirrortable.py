@@ -1,47 +1,17 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.6.14/build27/studiolibrary/packages/mutils\mirrortable.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary/packages/mutils\mirrortable.py
 """
-#!/usr/bin/python
-# -*- coding: latin-1 -*-
-# Released subject to the BSD License
-# Please visit http://www.voidspace.org.uk/python/license.shtml
-#
-# Copyright (c) 2014, Kurt Rathjen
-# All rights reserved.
-# Comments, suggestions and bug reports are welcome.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-   # * Redistributions of source code must retain the above copyright
-   #   notice, this list of conditions and the following disclaimer.
-   # * Redistributions in binary form must reproduce the above copyright
-   # notice, this list of conditions and the following disclaimer in the
-   # documentation and/or other materials provided with the distribution.
-   # * Neither the name of Kurt Rathjen nor the
-   # objects of its contributors may be used to endorse or promote products
-   # derived from this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY KURT RATHJEN  ''AS IS'' AND ANY
-# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL KURT RATHJEN BE LIABLE FOR ANY
-# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # mirrortable.py
 import mutils
 
 # Example 1:
 # Create mirror table from objects
-mt = mutils.MirrorTable.createFromObjects(objects, "_l_", "_r_", MirrorPlane.YZ)
+mt = mutils.MirrorTable.fromObjects(objects, "_l_", "_r_", MirrorPlane.YZ)
 
 # Example 2:
 # Create mirror table from selected objects
 objects = maya.cmds.ls(selection=True)
-mt = mutils.MirrorTable.createFromObjects(objects, "_l_", "_r_", MirrorPlane.YZ)
+mt = mutils.MirrorTable.fromObjects(objects, "_l_", "_r_", MirrorPlane.YZ)
 
 # Example 3:
 # Save to file
@@ -51,7 +21,7 @@ mt.save(path)
 # Example 4:
 # Load from file
 path = "/tmp/test.mt"
-mt = mutils.MirrorTable.createFromPath(path)
+mt = mutils.MirrorTable.fromPath(path)
 
 # load to objects from file
 mt.load()
@@ -70,13 +40,18 @@ mt.rightToLeft()
 """
 import re
 import mutils
-log = mutils.logger
+import logging
 try:
     import maya.cmds
-except ImportError as e:
-    print e
+except ImportError:
+    import traceback
+    traceback.print_exc()
 
-__all__ = ['MirrorTable', 'MirrorPlane', 'MirrorOption']
+__all__ = ['MirrorTable',
+ 'MirrorPlane',
+ 'MirrorOption',
+ 'Axis']
+logger = logging.getLogger(__name__)
 RE_LEFT_SIDE = 'Lf|lf_|_lf|_l_|_L|L_|left|Left'
 RE_RIGHT_SIDE = 'Rt|rt_|_rt|_r_|_R|R_|right|Right'
 
@@ -96,47 +71,47 @@ class MirrorTable(mutils.SelectionSet):
 
     @classmethod
     @mutils.restoreSelection
-    def createFromObjects(cls, objects, left = None, right = None, mirrorPlane = MirrorPlane.YZ):
+    def fromObjects(cls, objects, leftSide = None, rightSide = None, mirrorPlane = MirrorPlane.YZ):
         """
-        @type objects: list[str]
+        :type objects: list[str]
         """
         m = cls()
-        m.setMetadata('left', left)
-        m.setMetadata('right', right)
+        m.setMetadata('left', leftSide)
+        m.setMetadata('right', rightSide)
         m.setMetadata('mirrorPlane', mirrorPlane)
         for obj in objects:
             m.add(obj)
 
         return m
 
-    def left(self):
+    def leftSide(self):
         """
-        @rtype: str | None
+        :rtype: str | None
         """
         return self.metadata().get('left')
 
-    def right(self):
+    def rightSide(self):
         """
-        @rtype: str | None
+        :rtype: str | None
         """
         return self.metadata().get('right')
 
     def mirrorPlane(self):
         """
-        @rtype: str | None
+        :rtype: str | None
         """
         return self.metadata().get('mirrorPlane')
 
     def mirrorAxis(self, name):
         """
-        @rtype: list[int]
+        :rtype: list[int]
         """
         return self.objects()[name]['mirrorAxis']
 
     def leftCount(self, objects = None):
         """
-        @type objects: list[str]
-        @rtype: int
+        :type objects: list[str]
+        :rtype: int
         """
         if objects is None:
             objects = self.objects()
@@ -144,8 +119,8 @@ class MirrorTable(mutils.SelectionSet):
 
     def rightCount(self, objects = None):
         """
-        @type objects: list[str]
-        @rtype: int
+        :type objects: list[str]
+        :rtype: int
         """
         if objects is None:
             objects = self.objects()
@@ -153,8 +128,8 @@ class MirrorTable(mutils.SelectionSet):
 
     def createObjectData(self, name):
         """
-        @type name:
-        @rtype:
+        :type name:
+        :rtype:
         """
         result = {'mirrorAxis': self.calculateMirrorAxis(name)}
         return result
@@ -162,25 +137,25 @@ class MirrorTable(mutils.SelectionSet):
     @staticmethod
     def findLeftSide(objects):
         """
-        @type objects: str
-        @rtype: str
+        :type objects: str
+        :rtype: str
         """
         return MirrorTable.findSide(objects, RE_LEFT_SIDE)
 
     @staticmethod
     def findRightSide(objects):
         """
-        @type objects: str
-        @rtype: str
+        :type objects: str
+        :rtype: str
         """
         return MirrorTable.findSide(objects, RE_RIGHT_SIDE)
 
     @staticmethod
     def findSide(objects, reSearch):
         """
-        @type objects: str
-        @type reSearch: str
-        @rtype: str
+        :type objects: str
+        :type reSearch: str
+        :rtype: str
         """
         reSearch = re.compile(reSearch)
         for obj in objects:
@@ -192,15 +167,15 @@ class MirrorTable(mutils.SelectionSet):
 
     def matchObjects(self, objects = None, namespaces = None, selection = False, callback = None):
         """
-        @param objects:
-        @param namespaces:
-        @param selection:
-        @param callback:
-        @return:
+        :type objects: list[str]
+        :type namespaces: list[str]
+        :type selection: bool
+        :type callback: func
+        :rtype: list[str]
         """
-        srcObjects = self.objects().keys()
-        matches = mutils.matchObjects(srcObjects=srcObjects, dstObjects=objects, dstNamespaces=namespaces, selection=selection)
         results = {}
+        srcObjects = self.objects().keys()
+        matches = mutils.matchNames(srcObjects=srcObjects, dstObjects=objects, dstNamespaces=namespaces)
         for srcNode, dstNode in matches:
             dstObj = dstNode.name()
             mirrorAxis = self.mirrorAxis(srcNode.name())
@@ -222,22 +197,24 @@ class MirrorTable(mutils.SelectionSet):
     @mutils.unifyUndo
     @mutils.showWaitCursor
     @mutils.restoreSelection
-    def load(self, objects = None, namespaces = None, option = MirrorOption.Swap, animation = True, time = None):
+    def load(self, objects = None, namespaces = None, option = None, animation = True, time = None):
         """
-        @param objects: list[str]
-        @param namespaces: list[str]
-        @param option: mirrorOptions
+        :type objects: list[str]
+        :type namespaces: list[str]
+        :type option: mirrorOptions
         """
-        srcObjects = self.objects().keys()
-        matches = mutils.matchObjects(srcObjects=srcObjects, dstObjects=objects, dstNamespaces=namespaces)
-        foundObject = False
         results = {}
+        foundObject = False
+        srcObjects = self.objects().keys()
+        if option is None:
+            option = MirrorOption.Swap
+        matches = mutils.matchNames(srcObjects=srcObjects, dstObjects=objects, dstNamespaces=namespaces)
         for srcNode, dstNode in matches:
             dstObj = dstNode.name()
             dstObj2 = self.mirrorObject(dstObj) or dstObj
             if dstObj2 not in results:
-                mirrorAxis = self.mirrorAxis(srcNode.name())
                 results[dstObj] = dstObj2
+                mirrorAxis = self.mirrorAxis(srcNode.name())
                 dstObjExists = maya.cmds.objExists(dstObj)
                 dstObj2Exists = maya.cmds.objExists(dstObj2)
                 if dstObjExists and dstObj2Exists:
@@ -248,20 +225,24 @@ class MirrorTable(mutils.SelectionSet):
                         self.transferStatic(dstObj, dstObj2, mirrorAxis=mirrorAxis, option=option)
                 else:
                     if not dstObjExists:
-                        log.debug('Cannot find destination object %s' % dstObj)
+                        msg = 'Cannot find destination object {0}'
+                        msg = msg.format(dstObj)
+                        logger.debug(msg)
                     if not dstObj2Exists:
-                        log.debug('Cannot find mirrored destination object %s' % dstObj2)
+                        msg = 'Cannot find mirrored destination object {0}'
+                        msg = msg.format(dstObj2)
+                        logger.debug(msg)
 
         if not foundObject:
             raise mutils.NoMatchFoundError('No objects match when loading data')
 
     def transferStatic(self, srcObj, dstObj, mirrorAxis = None, attrs = None, option = MirrorOption.Swap):
         """
-        @param srcObj:
-        @param dstObj:
-        @param mirrorAxis:
-        @param attrs:
-        @param option:
+        :type srcObj: str
+        :type dstObj: str
+        :type mirrorAxis: int
+        :type attrs: None | str
+        :type option: MirrorOption
         """
         srcValue = None
         dstValue = None
@@ -282,27 +263,29 @@ class MirrorTable(mutils.SelectionSet):
                 if srcValid:
                     self.setAttr(srcObj, attr, dstValue, mirrorAxis=mirrorAxis)
             else:
-                log.debug('Cannot find destination attribute %s' % dstAttr)
+                logger.debug('Cannot find destination attribute %s' % dstAttr)
 
     def setAttr(self, name, attr, value, mirrorAxis = None):
         """
-        @param name:
-        @param attr:
-        @param value:
-        @param mirrorAxis:
+        :type name: str
+        :type: attr: str
+        :type: value: int | float
+        :type mirrorAxis: Axis
         """
         if mirrorAxis is not None:
             value = self.formatValue(attr, value, mirrorAxis)
         try:
             maya.cmds.setAttr(name + '.' + attr, value)
-        except RuntimeError as e:
-            log.debug('Cannot mirror static attribute %s.%s' % (name, attr))
+        except RuntimeError:
+            msg = 'Cannot mirror static attribute {name}.{attr}'
+            msg = msg.format(name=name, attr=attr)
+            logger.debug(msg)
 
     def transferAnimation(self, srcObj, dstObj, mirrorAxis = None, option = MirrorOption.Swap, time = None):
         """
-        @param srcObj:
-        @param dstObj:
-        @param mirrorAxis:
+        :type srcObj: str
+        :type dstObj: str
+        :type mirrorAxis: Axis
         """
         srcValid = self.isValidMirror(srcObj, option)
         dstValid = self.isValidMirror(dstObj, option)
@@ -319,10 +302,10 @@ class MirrorTable(mutils.SelectionSet):
 
     def _transferAnimation(self, srcObj, dstObj, attrs = None, mirrorAxis = None, time = None):
         """
-        @param srcObj:
-        @param dstObj:
-        @param attrs:
-        @param mirrorAxis:
+        :type srcObj: str
+        :type dstObj: str
+        :type attrs: list[str]
+        :type mirrorAxis: (int, int, int)
         """
         maya.cmds.cutKey(dstObj, time=time or ())
         if maya.cmds.copyKey(srcObj, time=time or ()):
@@ -345,9 +328,9 @@ class MirrorTable(mutils.SelectionSet):
 
     def isValidMirror(self, obj, option):
         """
-        @param obj: str
-        @param option: MirrorOption
-        @rtype: bool
+        :type obj: str
+        :type option: MirrorOption
+        :rtype: bool
         """
         if option == MirrorOption.Swap:
             return True
@@ -361,9 +344,9 @@ class MirrorTable(mutils.SelectionSet):
     @staticmethod
     def animCurve(obj, attr):
         """
-        @param obj:
-        @param attr:
-        @return:
+        :type obj: str
+        :type attr: str
+        :rtype: str
         """
         connections = maya.cmds.listConnections(obj + '.' + attr, d=False, s=True)
         if connections:
@@ -372,8 +355,8 @@ class MirrorTable(mutils.SelectionSet):
     @staticmethod
     def scaleKey(obj, attr):
         """
-        @param obj:
-        @param attr:
+        :type obj: str
+        :type attr: str
         """
         curve = MirrorTable.animCurve(obj, attr)
         if curve:
@@ -383,9 +366,9 @@ class MirrorTable(mutils.SelectionSet):
     @staticmethod
     def isAttrMirrored(attr, mirrorAxis):
         """
-        @type attr: str
-        @type mirrorAxis: list[int]
-        @rtype: float
+        :type attr: str
+        :type mirrorAxis: list[int]
+        :rtype: float
         """
         if mirrorAxis == [-1, 1, 1]:
             if attr == 'translateX' or attr == 'rotateY' or attr == 'rotateZ':
@@ -404,10 +387,10 @@ class MirrorTable(mutils.SelectionSet):
     @staticmethod
     def formatValue(attr, value, mirrorAxis):
         """
-        @type attr: str
-        @type value: float
-        @type mirrorAxis: list[int]
-        @rtype: float
+        :type attr: str
+        :type value: float
+        :type mirrorAxis: list[int]
+        :rtype: float
         """
         if MirrorTable.isAttrMirrored(attr, mirrorAxis):
             return value * -1
@@ -415,10 +398,10 @@ class MirrorTable(mutils.SelectionSet):
 
     def isLeftSide(self, obj):
         """
-        @type obj: str
-        @rtype: bool
+        :type obj: str
+        :rtype: bool
         """
-        left = self.left()
+        left = self.leftSide()
         if left:
             if len(left) == 1:
                 return self.replaceSingleSide(obj, left, 'X') != obj
@@ -427,10 +410,10 @@ class MirrorTable(mutils.SelectionSet):
 
     def isRightSide(self, obj):
         """
-        @type obj: str
-        @rtype: bool
+        :type obj: str
+        :rtype: bool
         """
-        right = self.right()
+        right = self.rightSide()
         if right:
             if len(right) == 1:
                 return self.replaceSingleSide(obj, right, 'X') != obj
@@ -439,10 +422,19 @@ class MirrorTable(mutils.SelectionSet):
 
     def replaceSingleSide(self, srcObj, search, replace):
         """
-        @type srcObj:
-        @type search:
-        @type replace:
-        @rtype: str
+        If the left and right naming convention is only one character.
+        eg: "L" and "R". We then replace only the start or end of the
+        name eg: R_footRoll -> L_footRoll NOT L_footLoll.
+        
+        Group|Character1:LfootRollExtra|Character1:LfootRoll
+        :R
+        Group|Character1:footRollExtraR|Character1:footRollR
+        R|
+        
+        :type srcObj: str
+        :type search: str
+        :type replace: str
+        :rtype: str
         """
         dstObj = srcObj
         if ':' in srcObj:
@@ -465,11 +457,11 @@ class MirrorTable(mutils.SelectionSet):
 
     def mirrorObject(self, srcObj):
         """
-        @type srcObj: str
-        @rtype: str
+        :type srcObj: str
+        :rtype: str
         """
-        left = self.left()
-        right = self.right()
+        left = self.leftSide()
+        right = self.rightSide()
         if len(left) == 1 and len(right) == 1:
             dstObj = self.replaceSingleSide(srcObj, left, right)
             if dstObj != srcObj:
@@ -477,16 +469,16 @@ class MirrorTable(mutils.SelectionSet):
             dstObj = self.replaceSingleSide(srcObj, right, left)
             if dstObj != srcObj:
                 return dstObj
-        dstObj = srcObj.replace(self.left(), self.right())
+        dstObj = srcObj.replace(self.leftSide(), self.rightSide())
         if dstObj == srcObj:
-            dstObj = srcObj.replace(self.right(), self.left())
+            dstObj = srcObj.replace(self.rightSide(), self.leftSide())
         if dstObj != srcObj:
             return dstObj
 
     def calculateMirrorAxis(self, srcObj):
         """
-        @type srcObj: str 
-        @rtype: list[int]
+        :type srcObj: str
+        :rtype: (int, int int)
         """
         result = [1, 1, 1]
         dstObj = self.mirrorObject(srcObj) or srcObj
@@ -503,8 +495,8 @@ class MirrorTable(mutils.SelectionSet):
     def maxIndex(l):
         """
         Finds the largest number in a list
-        @type l: list[]
-        @rtype: int
+        :type l: list
+        :rtype: int
         """
         m = 0
         index = 0
@@ -519,9 +511,9 @@ class MirrorTable(mutils.SelectionSet):
     @staticmethod
     def axisWorldPosition(obj, t):
         """
-        @type obj: str
-        @type t: list[int]
-        @rtype: list[float]
+        :type obj: str
+        :type t: (int, int, int)
+        :rtype: list[float]
         """
         transform1 = maya.cmds.createNode('transform', name='transform1')
         try:
@@ -536,11 +528,11 @@ class MirrorTable(mutils.SelectionSet):
     @staticmethod
     def isAxisMirrored(srcObj, dstObj, t, mirrorPlane):
         """
-        @param srcObj: str
-        @param dstObj: str
-        @param t: list[int] Translate
-        @param mirrorPlane: list[int]
-        @rtype: int
+        :type srcObj: str
+        :type dstObj: str
+        :type t:
+        :type mirrorPlane: list[int]
+        :rtype: int
         """
         old1 = maya.cmds.xform(srcObj, q=True, ws=True, piv=True)
         old2 = maya.cmds.xform(dstObj, q=True, ws=True, piv=True)
@@ -557,8 +549,8 @@ class MirrorTable(mutils.SelectionSet):
     @staticmethod
     def _calculateMirrorAxis(obj, mirrorPlane):
         """
-        @param obj: str
-        @rtype: list[int]
+        :type obj: str
+        :rtype: list[int]
         """
         result = [1, 1, 1]
         transform0 = maya.cmds.createNode('transform', name='transform0')

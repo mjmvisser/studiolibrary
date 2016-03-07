@@ -1,10 +1,10 @@
 {
   "metadata": {
     "description": "", 
-    "user": "hovel", 
+    "user": "Hovel", 
     "mayaSceneFile": "C:/Users/hovel/Dropbox/git/mutils/src/mutils/tests/data/test_pose.ma", 
     "version": "1.0.0", 
-    "mayaVersion": "2014 x64"
+    "mayaVersion": "2016"
   }
 ,
   "objects": {

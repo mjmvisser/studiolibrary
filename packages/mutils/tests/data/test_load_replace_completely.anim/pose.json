@@ -6,10 +6,10 @@
     "endFrame": 10, 
     "linearUnit": "cm", 
     "version": "1.0.0", 
-    "user": "hovel", 
+    "user": "Hovel", 
     "startFrame": 1, 
     "timeUnit": "film", 
-    "mayaVersion": "2014 x64"
+    "mayaVersion": "2016"
   }
 ,
   "objects": {
