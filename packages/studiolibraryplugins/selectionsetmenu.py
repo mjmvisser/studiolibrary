@@ -18,7 +18,9 @@ import os
 import logging
 from functools import partial
 
-from PySide import QtGui
+from studioqt import QtGui
+from studioqt import QtWidgets
+
 
 import studiolibrary
 import studiolibraryplugins
@@ -34,22 +36,33 @@ logger = logging.getLogger(__name__)
 def selectContentAction(record, parent=None):
     """
     :param record: mayabaseplugin.Record
-    :param parent: QtGui.QMenu
+    :param parent: QtWidgets.QMenu
     """
     icon = studiolibraryplugins.resource().icon("arrow")
-    action = QtGui.QAction(icon, "Select content", parent)
+    action = QtWidgets.QAction(icon, "Select content", parent)
     action.triggered.connect(record.selectContent)
     return action
 
 
-class SelectionSetMenu(QtGui.QMenu):
+def show(path, **kwargs):
+    """
+    :type path: str
+    :rtype: QtWidgets.QAction
+    """
+    menu = SelectionSetMenu.fromPath(path, **kwargs)
+    position = QtGui.QCursor().pos()
+    action = menu.exec_(position)
+    return action
+
+
+class SelectionSetMenu(QtWidgets.QMenu):
 
     @classmethod
     def fromPath(cls, path, **kwargs):
         """
-        :param path: str
-        :param kwargs: dict
-        :rtype: QtGui.QAction
+        :type path: str
+        :type kwargs: dict
+        :rtype: QtWidgets.QAction
         """
         record = studiolibrary.BasePath(path)
         return cls(record, enableSelectContent=False, **kwargs)
@@ -63,11 +76,11 @@ class SelectionSetMenu(QtGui.QMenu):
     ):
         """
         :type record: mayabaseplugin.Record
-        :type parent: QtGui.QMenu
+        :type parent: QtWidgets.QMenu
         :type namespaces: list[str]
         :type enableSelectContent: bool
         """
-        QtGui.QMenu.__init__(self, "Selection Sets", parent)
+        QtWidgets.QMenu.__init__(self, "Selection Sets", parent)
 
         icon = studiolibraryplugins.resource().icon("selectionSet")
         self.setIcon(icon)
@@ -99,7 +112,16 @@ class SelectionSetMenu(QtGui.QMenu):
         """
         :rtype: list[studiolibrary.Record]
         """
-        paths = studiolibrary.findPaths(self.record().path(), ".set")
+        path = self.record().path()
+        match = lambda path: path.endswith(".set")
+
+        paths = studiolibrary.findPaths(
+            path,
+            match=match,
+            direction=studiolibrary.Direction.Up,
+        )
+
+        paths = list(paths)
         records = []
 
         for path in paths:
@@ -119,13 +141,19 @@ class SelectionSetMenu(QtGui.QMenu):
             self.addAction(action)
             self.addSeparator()
 
-        for selectionSet in self.selectionSets():
+        selectionSets = self.selectionSets()
 
-            dirname = os.path.basename(selectionSet.dirname())
-            basename = selectionSet.name().replace(selectionSet.extension(),"")
-            nicename = dirname + ": " + basename
+        if selectionSets:
+            for selectionSet in selectionSets:
+                dirname = os.path.basename(selectionSet.dirname())
+                basename = selectionSet.name().replace(selectionSet.extension(),"")
+                nicename = dirname + ": " + basename
 
-            action = QtGui.QAction(nicename, self)
-            callback = partial(selectionSet.load, namespaces=self.namespaces())
-            action.triggered.connect(callback)
+                action = QtWidgets.QAction(nicename, self)
+                callback = partial(selectionSet.load, namespaces=self.namespaces())
+                action.triggered.connect(callback)
+                self.addAction(action)
+        else:
+            action = QtWidgets.QAction("No selection sets found!", self)
+            action.setEnabled(False)
             self.addAction(action)

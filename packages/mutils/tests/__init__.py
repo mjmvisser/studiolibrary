@@ -1,4 +1,4 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary/packages/mutils\tests\__init__.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary/packages/mutils\tests\__init__.py
 """
 # Example:
 # RUN TEST SUITE

@@ -33,28 +33,35 @@ class Plugin(studiolibrary.Plugin):
         self.setName("lock")  # Must set a name for the plugin
         self.setIconPath(iconPath)
 
-        self._superusers = []
-        self._lockFolder = re.compile("")
-        self._unlockFolder = re.compile("")
-
     def newAction(self, parent=None):
         """
         Overriding this method so that it doesn't show in the "+" new menu.
         """
         pass
 
-    def load(self):
+    def superusers(self):
         """
-        Check what kwargs were used in the studiolibrary.main() function
-        """
-        self._superusers = self.library().kwargs().get("superusers", [])
-        self._lockFolder = re.compile(self.library().kwargs().get("lockFolder", ""))
-        self._unlockFolder = re.compile(self.library().kwargs().get("unlockFolder", ""))
+        Return a list of the superusers by name.
 
-    def folderSelectionChanged(self, itemSelection1, itemSelection2):
+        :rtype: list[str]
         """
-        :type itemSelection1:
-        :type itemSelection2:
+        return self.library().kwargs().get("superusers", [])
+
+    def reLockedFolders(self):
+        """
+        Return a regex for the locked folders.
+        """
+        return re.compile(self.library().kwargs().get("lockFolder", ""))
+
+    def reUnlockedFolders(self):
+        """
+        Return a regex for the unlocked folders.
+        """
+        return re.compile(self.library().kwargs().get("unlockFolder", ""))
+
+    def folderSelectionChanged(self):
+        """
+        :rtype: None
         """
         self.updateLock()
 
@@ -62,12 +69,16 @@ class Plugin(studiolibrary.Plugin):
         """
         :rtype: None
         """
-        if studiolibrary.user() in self._superusers or []:
+        superusers = self.superusers()
+        reLockedFolders = self.reLockedFolders()
+        reUnlockedFolders = self.reUnlockedFolders()
+
+        if studiolibrary.user() in superusers or []:
             self.libraryWidget().setLocked(False)
             return
 
-        if self._lockFolder.match("") and self._unlockFolder.match(""):
-            if self._superusers:  # Lock if only the superusers arg is used
+        if reLockedFolders.match("") and reUnlockedFolders.match(""):
+            if superusers:  # Lock if only the superusers arg is used
                 self.libraryWidget().setLocked(True)
             else:  # Unlock if no keyword arguments are used
                 self.libraryWidget().setLocked(False)
@@ -76,17 +87,17 @@ class Plugin(studiolibrary.Plugin):
         folders = self.libraryWidget().selectedFolders()
 
         # Lock the selected folders that match the self._lockFolder regx
-        if not self._lockFolder.match(""):
+        if not reLockedFolders.match(""):
             for folder in folders or []:
-                if self._lockFolder.search(folder.path()):
+                if reLockedFolders.search(folder.path()):
                     self.libraryWidget().setLocked(True)
                     return
             self.libraryWidget().setLocked(False)
 
         # Unlock the selected folders that match the self._unlockFolder regx
-        if not self._unlockFolder.match(""):
+        if not reUnlockedFolders.match(""):
             for folder in folders or []:
-                if self._unlockFolder.search(folder.path()):
+                if reUnlockedFolders.search(folder.path()):
                     self.libraryWidget().setLocked(False)
                     return
             self.libraryWidget().setLocked(True)

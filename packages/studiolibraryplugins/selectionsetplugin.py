@@ -17,7 +17,9 @@
 import os
 import mutils
 
-from PySide import QtGui
+from studioqt import QtGui
+from studioqt import QtCore
+from studioqt import QtWidgets
 
 import studiolibrary
 import studiolibraryplugins
@@ -25,19 +27,7 @@ import studiolibraryplugins
 from studiolibraryplugins import mayabaseplugin
 
 
-class PluginError(Exception):
-    """Base class for exceptions in this module."""
-    pass
-
-
 class Plugin(mayabaseplugin.Plugin):
-
-    @staticmethod
-    def settings():
-        """
-        :rtype: studiolibrary.Settings
-        """
-        return studiolibrary.Settings.instance("Plugin", "Selection Set")
 
     def __init__(self, library):
         """
@@ -60,7 +50,7 @@ class Plugin(mayabaseplugin.Plugin):
 
     def infoWidget(self, parent, record):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :type record: Record
         :rtype: SelectionSetInfoWidget
         """
@@ -68,7 +58,7 @@ class Plugin(mayabaseplugin.Plugin):
 
     def createWidget(self, parent):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :rtype: SelectionSetCreateWidget
         """
         record = self.record()
@@ -76,7 +66,7 @@ class Plugin(mayabaseplugin.Plugin):
 
     def previewWidget(self, parent, record):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :type record: Record
         :rtype: SelectionSetPreviewWidget
         """
@@ -97,11 +87,14 @@ class Record(mayabaseplugin.Record):
         if not os.path.exists(self.transferPath()):
             self.setTransferBasename("set.json")
 
-    def settings(self):
+    def previewWidget(self, parent=None):
         """
-        :rtype: studiolibrary.Settings
+        Support for Studio Library 2.0
+
+        :type parent: QtWidgets.QWidget
+        :rtype: PosePreviewWidget
         """
-        return Plugin.settings()
+        return SelectionSetPreviewWidget(parent=parent, record=self)
 
     def doubleClicked(self):
         """
@@ -127,7 +120,7 @@ class SelectionSetInfoWidget(mayabaseplugin.InfoWidget):
 
     def __init__(self, *args, **kwargs):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :type record: Record
         """
         mayabaseplugin.InfoWidget.__init__(self, *args, **kwargs)
@@ -137,7 +130,7 @@ class SelectionSetPreviewWidget(mayabaseplugin.PreviewWidget):
 
     def __init__(self, *args, **kwargs):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :type record: Record
         """
         mayabaseplugin.PreviewWidget.__init__(self, *args, **kwargs)
@@ -153,7 +146,7 @@ class SelectionSetCreateWidget(mayabaseplugin.CreateWidget):
 
     def __init__(self, *args, **kwargs):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :type record: Record
         """
         mayabaseplugin.CreateWidget.__init__(self, *args, **kwargs)

@@ -1,4 +1,4 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary/packages/mutils\tests\test_anim.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary/packages/mutils\tests\test_anim.py
 import os
 import mutils
 import maya.cmds
@@ -17,7 +17,7 @@ class TestAnim(test_base.TestBase):
         """
         self.open()
         anim = mutils.Animation.fromObjects(self.srcObjects)
-        anim.save(self.dstPath, compress=True, bakeConnected=bakeConnected)
+        anim.save(self.dstPath, bakeConnected=bakeConnected)
 
     def test_older_version(self):
         """
@@ -56,7 +56,7 @@ class TestAnim(test_base.TestBase):
          'dstSphere:sphere']
         self.open(path=srcPath)
         anim = mutils.Animation.fromObjects(srcObjects)
-        anim.save(dstPath, compress=True, bakeConnected=True)
+        anim.save(dstPath, bakeConnected=True)
         anim = mutils.Animation.fromPath(dstPath)
         anim.load(dstObjects)
         for frame in [1, 10, 24]:

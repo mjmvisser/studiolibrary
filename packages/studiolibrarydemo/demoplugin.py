@@ -16,38 +16,12 @@
 """
 To test this demo please run this file.
 
-You don't need to be in Maya to run this demo.
-
-The Studio Library window:
-
-    |+=================x|
-    |     |R|R|R|R|     |
-    |  F  |R|R    | C/P |
-    |     |       |     |
-    |     |       |     |
-    |-------------------|
-
-F = FolderWidget
-The folder widget should not be modified by the plugin
-
-R = Record
-A record is an individual item which you can save and load data from.
-If you would like to customize the behaviour of a record you will need to
-inherit from studiolibrary.Record (see the atom plugin for more details).
-It should also be possible to load a record in gui mode or in batch mode.
-
-C = CreateWidget
-The create widget is a normal Qt Widget that will be passed the Record
-object for saving.
-
-P = PreviewWidget
-The preview widget is a normal Qt Widget that will be passed the selected
-Record for loading.
+NOTE: You don't need to be in Maya to run this demo.
 """
 
 import logging
 
-from PySide import QtGui
+from studioqt import QtWidgets
 
 import studioqt
 import studiolibrary
@@ -88,7 +62,7 @@ class Plugin(studiolibrary.Plugin):
 
     def createWidget(self, parent):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :rtype: CreateWidget
         """
         record = self.record()
@@ -96,7 +70,7 @@ class Plugin(studiolibrary.Plugin):
 
     def previewWidget(self, parent, record):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :type record: Record
         :rtype: CreateWidget
         """
@@ -114,13 +88,13 @@ class Record(studiolibrary.Record):
         """
         self.load()
 
-    def save(self, path, contents=None, force=False):
+    def save(self, path, contents=None):
         """
         Save is called from the create widget.
         """
         logger.info("Saving a new record!!")
         self.metaFile().data().setdefault("customRecordOption", "Hello World")
-        studiolibrary.Record.save(self, path=path, contents=contents, force=force)
+        studiolibrary.Record.save(self, path=path, contents=contents)
 
     def load(self):
         """
@@ -140,14 +114,14 @@ class Record(studiolibrary.Record):
         logger.info('----------------')
 
 
-class CreateWidget(QtGui.QWidget):
+class CreateWidget(QtWidgets.QWidget):
 
     def __init__(self, record, parent):
         """
         :type record: Record
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         """
-        QtGui.QWidget.__init__(self, parent)
+        QtWidgets.QWidget.__init__(self, parent)
 
         # If you're using studioqt.loadUi(self) then the ui file must have the
         # following naming convention /resource/ui/PreviewWidget.ui
@@ -183,9 +157,9 @@ class CreateWidget(QtGui.QWidget):
 
     def showEvent(self, event):
         """
-        :type: QtGui.Event
+        :type: QtCore.QEvent
         """
-        QtGui.QWidget.showEvent(self, event)
+        QtWidgets.QWidget.showEvent(self, event)
         self.ui.name.setFocus()
 
     def accept(self):
@@ -210,14 +184,14 @@ class CreateWidget(QtGui.QWidget):
             self.libraryWidget().criticalDialog(str(msg))
 
 
-class PreviewWidget(QtGui.QWidget):
+class PreviewWidget(QtWidgets.QWidget):
 
     def __init__(self, record, parent=None):
         """
         :type record: Record
         :type parent: studiolibrary.LibraryWidget
         """
-        QtGui.QWidget.__init__(self, parent)
+        QtWidgets.QWidget.__init__(self, parent)
 
         # If you're using studioqt.loadUi(self) then the ui file must have the
         # following naming convention /resource/ui/PreviewWidget.ui
@@ -267,7 +241,7 @@ class PreviewWidget(QtGui.QWidget):
         )
 
         msg = msg.format(self.record().metaFile().data())
-        QtGui.QMessageBox.information(self.parent(), "YAY!", msg)
+        QtWidgets.QMessageBox.information(self.parent(), "YAY!", msg)
 
 
 def test():

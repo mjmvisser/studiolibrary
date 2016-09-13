@@ -14,8 +14,6 @@
 # IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
 # OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-import os
-
 import studiolibrary
 
 studiolibrary.Library.DEFAULT_PLUGINS = [
@@ -23,27 +21,17 @@ studiolibrary.Library.DEFAULT_PLUGINS = [
     "studiolibraryplugins.poseplugin",
     "studiolibraryplugins.animationplugin",
     "studiolibraryplugins.mirrortableplugin",
-    "studiolibraryplugins.selectionsetplugin"
+    "studiolibraryplugins.selectionsetplugin",
 ]
 
-# studiolibrary.Library.DEFAULT_COLOR = "rgb(0,200,100)"
-# studiolibrary.Library.DEFAULT_BACKGROUND_COLOR = "rgb(60,100,180)"
+studiolibrary.CHECK_FOR_UPDATES_ENABLED = True
 
-studiolibrary.CHECK_FOR_UPDATES_ENABLED = False
-
-studiolibrary.Analytics.ENABLED = False
+studiolibrary.Analytics.ENABLED = True
 studiolibrary.Analytics.DEFAULT_ID = "UA-50172384-1"
 
-studiolibrary.FoldersWidget.CACHE_ENABLED = True
-studiolibrary.FoldersWidget.SELECT_CHILDREN_ENABLED = False
+# Shared data
+# studiolibrary.Library.ITEM_DATA_PATH = "{root}/.studiolibrary/item_data.json"
+# studiolibrary.Library.FOLDER_DATA_PATH = "{root}/.studiolibrary/folder_data.json"
 
-studiolibrary.Settings.DEFAULT_PATH = os.getenv('APPDATA') or os.getenv('HOME')
-studiolibrary.Settings.DEFAULT_PATH += "/studiolibrary"
-
-# Meta paths and version paths are camel case for legacy reasons
-studiolibrary.Record.META_PATH = "<PATH>/.studioLibrary/record.dict"
-studiolibrary.Folder.META_PATH = "<PATH>/.studioLibrary/folder.dict"
-studiolibrary.Folder.ORDER_PATH = "<PATH>/.studioLibrary/order.list"
-
-studiolibrary.MasterPath.VERSION_CONTROL_ENABLED = True
-studiolibrary.MasterPath.VERSION_PATH = "<DIRNAME>/.studioLibrary/<NAME><EXTENSION>/<NAME><VERSION><EXTENSION>"
+# Meta paths are camel case for legacy reasons
+studiolibrary.Record.META_PATH = "{path}/.studioLibrary/record.json"

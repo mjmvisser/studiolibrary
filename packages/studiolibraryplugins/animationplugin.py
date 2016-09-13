@@ -48,10 +48,12 @@ record.load(
 """
 
 import os
+import shutil
 import logging
 
-from PySide import QtGui
-from PySide import QtCore
+from studioqt import QtGui
+from studioqt import QtCore
+from studioqt import QtWidgets
 
 import studioqt
 import studiolibrary
@@ -61,6 +63,7 @@ from studiolibraryplugins import mayabaseplugin
 
 try:
     import mutils
+    import mutils.gui
     import maya.cmds
     PasteOption = mutils.PasteOption
 except ImportError, msg:
@@ -81,13 +84,6 @@ class ValidateAnimationError(AnimationPluginError):
 
 
 class Plugin(mayabaseplugin.Plugin):
-
-    @staticmethod
-    def settings():
-        """
-        :rtype: studiolibrary.Settings
-        """
-        return studiolibrary.Settings.instance("Plugin", "Animation")
 
     def __init__(self, library):
         """
@@ -118,7 +114,7 @@ class Plugin(mayabaseplugin.Plugin):
 
     def infoWidget(self, parent, record):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :type record: Record
         :rtype: AnimationInfoWidget
         """
@@ -126,7 +122,7 @@ class Plugin(mayabaseplugin.Plugin):
 
     def createWidget(self, parent):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :rtype: AnimationCreateWidget
         """
         record = self.record()
@@ -134,10 +130,13 @@ class Plugin(mayabaseplugin.Plugin):
 
     def previewWidget(self, parent, record):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :type record: Record
         :rtype: AnimationPreviewWidget
         """
+        records = self.libraryWidget().selectedRecords()
+        record.setRecords(records)
+
         return AnimationPreviewWidget(parent=parent, record=record)
 
 
@@ -145,145 +144,36 @@ class Record(mayabaseplugin.Record):
 
     def __init__(self, *args, **kwargs):
         """
-        :type args: list[]
-        :type kwargs: dict[]
+        :type args: list
+        :type kwargs: dict
         """
         mayabaseplugin.Record.__init__(self, *args, **kwargs)
-        self._imageSequenceTimer = None
+
+        self._records = []
 
         self.setTransferClass(mutils.Animation)
         self.setTransferBasename("")
+        self.setImageSequencePath(self.path() + "/sequence")
 
-    def settings(self):
+    def records(self):
         """
-        :rtype: studiolibrary.Settings
+        :rtype: list[Record]
         """
-        return Plugin.settings()
+        return self._records
 
-    def imageSequenceTimer(self):
+    def setRecords(self, records):
         """
-        :rtype: studiolibrary.SequenceTimer
+        :type records: list[Record]
         """
-        return self._imageSequenceTimer
-
-    def setImageSequenceTimer(self, value):
-        """
-        :type value: studiolibrary.SequenceTimer
-        """
-        self._imageSequenceTimer = value
-
-    def stop(self):
-        """
-        :rtype: None
-        """
-        self.imageSequenceTimer().stop()
-        self.repaint()
-
-    def play(self):
-        """
-        :rtype: None
-        """
-        if not self.imageSequenceTimer():
-            dirname = self.path() + "/sequence"
-
-            sequenceTimer = studiolibrary.ImageSequenceTimer(self.listWidget())
-            sequenceTimer.setDirname(dirname)
-            sequenceTimer.onFrameChanged.connect(self.frameChanged)
-
-            self.setImageSequenceTimer(sequenceTimer)
-
-        self.imageSequenceTimer().start()
+        self._records = records
 
     def rename(self, *args, **kwargs):
         """
-        :type args: list[]
-        :type kwargs: dict[]
+        :type args: list
+        :type kwargs: dict
         """
-        self.setImageSequenceTimer(None)
+        self.resetImageSequence()
         mayabaseplugin.Record.rename(self, *args, **kwargs)
-
-    def mouseEnterEvent(self, event):
-        """
-        :type event: QtGui.QEvent
-        """
-        mayabaseplugin.Record.mouseEnterEvent(self, event)
-        self.play()
-
-    def mouseLeaveEvent(self, event):
-        """
-        :type event: QtGui.QEvent
-        """
-        mayabaseplugin.Record.mouseLeaveEvent(self, event)
-        self.stop()
-
-    def mouseMoveEvent(self, event):
-        """
-        :type event: QtGui.QEvent
-        """
-        mayabaseplugin.Record.mouseMoveEvent(self, event)
-        if studioqt.isControlModifier():
-            x = event.pos().x() - self.rect().x()
-            width = self.rect().width()
-            percent = 1.0 - (float(width - x) / float(width))
-            frame = int(self.imageSequenceTimer().duration() * percent)
-            self.imageSequenceTimer().setCurrentFrame(frame)
-            self.repaint()
-
-    def frameChanged(self, path):
-        """
-        :type path: str
-        """
-        if not studioqt.isControlModifier():
-            self.repaint()
-
-    def playheadColor(self):
-        """
-        :rtype: str
-        """
-        return QtGui.QColor(255, 80, 80)
-
-    def paintPlayhead(self, painter, option):
-        """
-        :type painter: QtGui.QPainter
-        :param option:
-        """
-        if self.imageSequenceTimer().currentFilename():
-            r = self.iconRect(option)
-            c = self.playheadColor()
-            sequenceTimer = self.imageSequenceTimer()
-
-            painter.setPen(QtCore.Qt.NoPen)
-            painter.setBrush(QtGui.QBrush(c))
-
-            if sequenceTimer.percent() <= 0:
-                width = 0
-            elif sequenceTimer.percent() >= 1:
-                width = r.width()
-            else:
-                width = (sequenceTimer.percent() * r.width()) - 1
-
-            painter.drawRect(r.x(), r.y(), width, 2)
-
-    def paintIcon(self, painter, option):
-        """
-        :type painter: QtGui.QPainter
-        :param option:
-        """
-        if self.imageSequenceTimer():
-
-            pixmap = self.pixmap()
-            filname = self.imageSequenceTimer().currentFilename()
-
-            if filname:
-                pixmap = QtGui.QPixmap(filname)
-                self.setPixmap(pixmap)
-
-            if isinstance(pixmap, QtGui.QPixmap):
-                painter.drawPixmap(self.iconRect(option), pixmap)
-
-            self.paintPlayhead(painter, option)
-        else:
-            mayabaseplugin.Record.paintIcon(self,  painter, option)
 
     def startFrame(self):
         """
@@ -367,10 +257,36 @@ class Record(mayabaseplugin.Record):
         if sourceEnd is None:
             sourceEnd = self.endFrame()
 
-        self.transferObject().load(objects=objects, namespaces=namespaces,
-                                   currentTime=currentTime, connect=connect,
-                                   option=option, startFrame=startFrame,
-                                   sourceTime=(sourceStart, sourceEnd))
+        records = self.records()
+
+        if len(records) > 1:
+
+            paths = []
+            for record in records:
+                path = record.transferObject().path()
+                paths.append(path)
+
+            mutils.loadAnims(
+                paths=paths,
+                spacing=5,
+                objects=objects,
+                namespaces=namespaces,
+                currentTime=currentTime,
+                option=option,
+                connect=connect,
+                startFrame=startFrame,
+                showDialog=True,
+            )
+        else:
+            self.transferObject().load(
+                objects=objects,
+                namespaces=namespaces,
+                currentTime=currentTime,
+                connect=connect,
+                option=option,
+                startFrame=startFrame,
+                sourceTime=(sourceStart, sourceEnd)
+            )
 
         logger.info("Loaded: %s" % self.path())
 
@@ -386,7 +302,7 @@ class Record(mayabaseplugin.Record):
         """
         contents = contents or list()
 
-        tempDir = studiolibrary.TempDir("Transfer", clean=True)
+        tempDir = mutils.TempDir("Transfer", clean=True)
         tempPath = tempDir.path() + "/transfer.anim"
 
         t = self.transferClass().fromObjects(objects)
@@ -429,9 +345,9 @@ class AnimationCreateWidget(mayabaseplugin.CreateWidget):
         mayabaseplugin.CreateWidget.__init__(self, *args, **kwargs)
 
         self._sequencePath = None
-        start, end = mutils.currentRange()
+        start, end = mutils.currentFrameRange()
 
-        self.ui.sequenceWidget = studiolibrary.ImageSequenceWidget(self)
+        self.ui.sequenceWidget = studioqt.ImageSequenceWidget(self)
 
         icon = studiolibraryplugins.resource().icon("thumbnail")
         self.ui.sequenceWidget.setIcon(icon)
@@ -502,14 +418,14 @@ class AnimationCreateWidget(mayabaseplugin.CreateWidget):
         """
         :rtype: None
         """
-        start, end = mutils.selectedRange()
+        start, end = mutils.selectedFrameRange()
         self.ui.endFrameEdit.setText(str(end))
 
     def setStartFrame(self):
         """
         :rtype: None
         """
-        start, end = mutils.selectedRange()
+        start, end = mutils.selectedFrameRange()
         self.ui.startFrameEdit.setText(str(start))
 
     def showByFrameDialog(self):
@@ -518,21 +434,37 @@ class AnimationCreateWidget(mayabaseplugin.CreateWidget):
         """
         msg = """To help speed up the playblast you can set the "by frame" to a number greater than 1. \
 For example if the "by frame" is set to 2 it will playblast every second frame.
+
 Would you like to show this message again?"""
 
         if self.settings().get("byFrameDialog") and self.duration() > 100 and self.byFrame() == 1:
-            result = self.libraryWidget().questionDialog(msg, "Tip")
 
-            if result == QtGui.QMessageBox.Cancel:
+            buttons = QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Cancel
+            result = studioqt.MessageBox.question(self, "Snapshot tip", msg, buttons)
+
+            if result == QtWidgets.QMessageBox.Cancel:
                 raise Exception("Cancelled!")
-            elif result == QtGui.QMessageBox.No:
+            elif result == QtWidgets.QMessageBox.No:
                 self.settings().set("byFrameDialog", False)
+
+    def _captured(self, playblastPath):
+        """
+        Triggered when the user captures a thumbnail/playblast.
+
+        :type playblastPath: str
+        :rtype: None
+        """
+        thumbnailPath = mutils.gui.tempThumbnailPath()
+        shutil.copyfile(playblastPath, thumbnailPath)
+
+        self.setIconPath(thumbnailPath)
+        self.setSequencePath(playblastPath)
 
     def snapshot(self):
         """
         :raise: AnimationPluginError
         """
-        startFrame, endFrame = mutils.selectedRange()
+        startFrame, endFrame = mutils.selectedFrameRange()
         if startFrame == endFrame:
             self.validateFrameRange()
             endFrame = self.endFrame()
@@ -542,18 +474,21 @@ Would you like to show this message again?"""
 
         try:
             step = self.byFrame()
-            iconPath, sequencePath = Plugin.createTempIconSequence(
+            playblastPath = mutils.gui.tempPlayblastPath()
+
+            mutils.gui.capture(
+                path=playblastPath,
                 startFrame=startFrame,
                 endFrame=endFrame,
-                step=step)
+                step=step,
+                clearCache=True,
+                captured=self._captured,
+            )
 
         except Exception, msg:
             title = "Error while taking snapshot"
-            QtGui.QMessageBox.critical(None, title, str(msg))
+            QtWidgets.QMessageBox.critical(None, title, str(msg))
             raise
-
-        self.setIconPath(iconPath)
-        self.setSequencePath(sequencePath)
 
     def setSequencePath(self, path):
         """
@@ -571,18 +506,6 @@ Would you like to show this message again?"""
             msg = "Please choose a start frame and an end frame."
             raise ValidateAnimationError(msg)
 
-    def validateUnknownNodes(self):
-        """
-        :raise: ValidateAnimationError
-        """
-        unknown = maya.cmds.ls(type="unknown")
-        if unknown:
-            msg = """Found %s unknown node/s in the current scene.
-Please fix or remove all unknown nodes before saving.
-""" % len(unknown)
-            logger.info("Unknown nodes: " + str(unknown))
-            raise ValidateAnimationError(msg)
-
     def save(self, objects, path,  iconPath, description):
         """
         :type objects: list[str]
@@ -594,8 +517,6 @@ Please fix or remove all unknown nodes before saving.
         endFrame = self.endFrame()
         startFrame = self.startFrame()
         bakeConnected = int(self.ui.bakeCheckBox.isChecked())
-
-        self.validateUnknownNodes()
 
         record = self.record()
         record.setDescription(description)
@@ -614,6 +535,8 @@ class AnimationPreviewWidget(mayabaseplugin.PreviewWidget):
         :type libraryWidget: studiolibrary.LibraryWidget
         """
         mayabaseplugin.PreviewWidget.__init__(self, *args, **kwargs)
+
+        self._records = []
 
         self.connect(self.ui.currentTime, QtCore.SIGNAL("stateChanged(int)"), self.updateState)
         self.connect(self.ui.helpCheckBox, QtCore.SIGNAL('stateChanged(int)'), self.showHelpImage)
@@ -636,6 +559,12 @@ class AnimationPreviewWidget(mayabaseplugin.PreviewWidget):
         self.ui.end.setText(endFrame)
         self.ui.sourceStartEdit.setText(startFrame)
         self.ui.sourceEndEdit.setText(endFrame)
+
+    def setRecords(self, records):
+        """
+        :rtype: list[Record]
+        """
+        self._records = records
 
     def sourceStart(self):
         """
@@ -730,5 +659,8 @@ class AnimationPreviewWidget(mayabaseplugin.PreviewWidget):
         """
         sourceStart = self.sourceStart()
         sourceEnd = self.sourceEnd()
-        self.record().loadFromSettings(sourceStart=sourceStart,
-                                       sourceEnd=sourceEnd)
+
+        self.record().loadFromSettings(
+            sourceStart=sourceStart,
+            sourceEnd=sourceEnd
+        )

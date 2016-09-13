@@ -1,4 +1,4 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary/packages/mutils\transferbase.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary/packages/mutils\transferbase.py
 """
 A common abstract interface for saving poses, animation, selection sets and
 mirror tables
@@ -18,145 +18,12 @@ t.read("/tmp/pose.dict")
 import os
 import abc
 import json
+import time
 import getpass
 import logging
 logger = logging.getLogger(__name__)
 
 class TransferBase(object):
-
-    def __init__(self):
-        self._path = None
-        self._data = {'metadata': {},
-         'objects': {}}
-
-    def setMetadata(self, key, value):
-        """
-        :type key: str
-        :type value: int | str | float | dict
-        """
-        self.data()['metadata'][key] = value
-
-    @classmethod
-    def fromPath(cls, path):
-        """
-        :type path: str
-        """
-        data = cls.read(path)
-        t = cls()
-        t.setPath(path)
-        t.setData(data)
-        return t
-
-    @classmethod
-    def fromObjects(cls, objects, **kwargs):
-        """
-        :type objects: list[str]
-        :type kwargs: dict
-        """
-        t = cls(**kwargs)
-        for obj in objects:
-            t.add(obj)
-
-        return t
-
-    def path(self):
-        """
-        :rtype: str
-        """
-        return self._path
-
-    def setPath(self, path):
-        """
-        :type path: str
-        """
-        self._path = path
-
-    def data(self):
-        """
-        :rtype: dict
-        """
-        return self._data
-
-    def setData(self, data):
-        """
-        :type data:
-        """
-        self._data = data
-
-    def objects(self):
-        """
-        :rtype: dict
-        """
-        return self.data().get('objects', {})
-
-    def object(self, name):
-        """
-        :type name: str
-        :rtype: dict
-        """
-        return self.objects().get(name, {})
-
-    def metadata(self):
-        """
-        data = {
-            "User": "",
-            "Scene": "",
-            "Reference": {"filename": "", "namespace": ""},
-            "Description": "",
-        }
-        :rtype: dict
-        """
-        return self.data().get('metadata', {})
-
-    def add(self, objects):
-        """
-        :type objects: str | list[str]
-        """
-        if isinstance(objects, basestring):
-            objects = [objects]
-        for name in objects:
-            self.objects()[name] = self.createObjectData(name)
-
-    def createObjectData(self, name):
-        """
-        :type name: str
-        :rtype: dict
-        """
-        return {}
-
-    def count(self):
-        """
-        :rtype: int
-        """
-        return len(self.objects() or [])
-
-    def remove(self, objects):
-        """
-        :type objects: str | list[str]
-        """
-        if isinstance(objects, basestring):
-            objects = [objects]
-        for obj in objects:
-            del self.objects()[obj]
-
-    @abc.abstractmethod
-    def load(self, *args, **kwargs):
-        pass
-
-    @staticmethod
-    def read(path):
-        """
-        :type path: str
-        :rtype: dict
-        """
-        with open(path, 'r') as f:
-            data = f.read()
-        if path.endswith('.dict'):
-            return TransferBase.readDictData(data)
-        elif path.endswith('.list'):
-            return TransferBase.readListData(data)
-        else:
-            return TransferBase.readJsonData(data)
 
     @staticmethod
     def readJsonData(data):
@@ -199,14 +66,170 @@ class TransferBase(object):
 
         return {'objects': result}
 
-    def save(self, path, description = ''):
+    @classmethod
+    def fromPath(cls, path):
+        """
+        :type path: str
+        """
+        t = cls()
+        t.setPath(path)
+        t.read()
+        return t
+
+    @classmethod
+    def fromObjects(cls, objects, **kwargs):
+        """
+        :type objects: list[str]
+        :type kwargs: dict
+        """
+        t = cls(**kwargs)
+        for obj in objects:
+            t.add(obj)
+
+        return t
+
+    def __init__(self):
+        self._path = None
+        self._data = {'metadata': {},
+         'objects': {}}
+
+    def setMetadata(self, key, value):
+        """
+        :type key: str
+        :type value: int | str | float | dict
+        """
+        self.data()['metadata'][key] = value
+
+    def updateMetadata(self, metadata):
+        """
+        :type metadata: str
+        """
+        self.data()['metadata'].update(metadata)
+
+    def metadata(self):
+        """
+        data = {
+            "User": "",
+            "Scene": "",
+            "Reference": {"filename": "", "namespace": ""},
+            "Description": "",
+        }
+        :rtype: dict
+        """
+        return self.data().get('metadata', {})
+
+    def path(self):
+        """
+        :rtype: str
+        """
+        return self._path
+
+    def setPath(self, path):
+        """
+        :type path: str
+        """
+        self._path = path
+
+    def data(self):
+        """
+        :rtype: dict
+        """
+        return self._data
+
+    def setData(self, data):
+        """
+        :type data:
+        """
+        self._data = data
+
+    def objects(self):
+        """
+        :rtype: dict
+        """
+        return self.data().get('objects', {})
+
+    def object(self, name):
+        """
+        :type name: str
+        :rtype: dict
+        """
+        return self.objects().get(name, {})
+
+    def createObjectData(self, name):
+        """
+        :type name: str
+        :rtype: dict
+        """
+        return {}
+
+    def mtime(self):
+        """
+        :rtype: float
+        """
+        return os.path.getmtime(self.path())
+
+    def ctime(self):
+        """
+        :rtype: float
+        """
+        return os.path.getctime(self.path())
+
+    def count(self):
+        """
+        :rtype: int
+        """
+        return len(self.objects() or [])
+
+    def add(self, objects):
+        """
+        :type objects: str | list[str]
+        """
+        if isinstance(objects, basestring):
+            objects = [objects]
+        for name in objects:
+            self.objects()[name] = self.createObjectData(name)
+
+    def remove(self, objects):
+        """
+        :type objects: str | list[str]
+        """
+        if isinstance(objects, basestring):
+            objects = [objects]
+        for obj in objects:
+            del self.objects()[obj]
+
+    def read(self, path = None):
+        """
+        Return the data from the path set on the Transfer object.
+        
+        :rtype: dict
+        """
+        path = path or self.path()
+        with open(path, 'r') as f:
+            data = f.read()
+        if path.endswith('.dict'):
+            data = TransferBase.readDictData(data)
+        elif path.endswith('.list'):
+            data = TransferBase.readListData(data)
+        else:
+            data = TransferBase.readJsonData(data)
+        self.setData(data)
+
+    @abc.abstractmethod
+    def load(self, *args, **kwargs):
+        pass
+
+    def save(self, path, description = None):
         """
         :type path: str
         """
         logger.info('Saving pose: %s' % path)
+        ctime = str(time.time()).split('.')[0]
+        self.setMetadata('ctime', ctime)
         self.setMetadata('version', '1.0.0')
         self.setMetadata('user', getpass.getuser())
-        self.setMetadata('description', description)
+        if description:
+            self.setMetadata('description', description)
         metadata = {'metadata': self.metadata()}
         data = self.dump(metadata)[:-1] + ','
         objects = {'objects': self.objects()}

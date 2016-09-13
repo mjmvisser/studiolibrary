@@ -17,7 +17,8 @@
 import os
 import logging
 
-from PySide import QtGui
+from studioqt import QtGui
+from studioqt import QtWidgets
 
 import studiolibrary
 import studiolibrary.gui
@@ -32,8 +33,8 @@ class Plugin(studiolibrary.BasePlugin):
 
     def __init__(self, library):
         studiolibrary.BasePlugin.__init__(self)
-        self._library = library
 
+        self._library = library
         self._iconPath = ""
         self._action = None
         self._pixmap = None
@@ -41,58 +42,90 @@ class Plugin(studiolibrary.BasePlugin):
         self._extension = None
         self._loggerLevel = logging.NOTSET
 
-    @staticmethod
-    def defaultSettingsPath():
+    def match(self, path):
         """
-        :rtype: str
+        Return True if the plugin supports the given path.
+
+        :type path: str
+        :rtype: bool
         """
-        return os.path.join(studiolibrary.Settings.DEFAULT_PATH, "Plugin")
+        if path.endswith(self.extension()):
+            return True
+        return False
+
+    def settings(self):
+        """
+        :rtype: studiolibrary.Settings
+        """
+        return studiolibrary.Settings.instance("Plugin", self.name())
+
+    def record(self, path):
+        """
+        Return a record instance for the given path.
+
+        :type path: str
+        :rtype: studiolibrary.Record
+        :raises: NotImplementedError
+        """
+        raise NotImplementedError
 
     def createWidget(self, parent=None):
         """
-        :type parent: QtGui.QWidget or None
-        :rtype: QtGui.QWidget or None
+        Return the widget to create a new record instance.
+
+        Triggered when the user would like to create a new record.
+
+        :type parent: QtWidgets.QWidget or None
+        :rtype: QtWidgets.QWidget or None
         """
         pass
 
     def infoWidget(self, parent, record):
         """
-        :type parent: QtGui.QWidget or None
+        Return a widget containing info about the given record.
+
+        Triggered when the user hovers over a record.
+
+        :type parent: QtWidgets.QWidget or None
         :type record: studiolibrary.Record
-        :rtype: QtGui.QWidget or None
+        :rtype: QtWidgets.QWidget or None
         """
         pass
 
     def previewWidget(self, parent, record):
         """
-        :type parent: QtGui.QWidget or None
+        Return a widget to give more details and option for the given record.
+
+        Triggered when the user clicks on a record.
+
+        :type parent: QtWidgets.QWidget or None
         :type record: studiolibrary.Record
-        :rtype: QtGui.QWidget or None
+        :rtype: QtWidgets.QWidget or None
         """
         pass
 
     def newAction(self, parent=None):
         """
-        :type parent: QtGui.QWidget or None
+        Return the action to be displayed when the user clicks the "plus" icon.
+
+        :type parent: QtWidgets.QWidget or None
         :rtype: QtCore.QAction
         """
         icon = QtGui.QIcon(self.iconPath())
-        action = QtGui.QAction(icon, self.name(), parent)
+        action = QtWidgets.QAction(icon, self.name(), parent)
         return action
 
     def recordContextMenu(self, menu, records):
         """
-        :type menu: QtGui.QMenu
-        :type records: list[studiolibrary.Record]
+        Triggered when the user right clicks on a record.
+
+        :type menu: QtWidgets.QMenu
+        :type records: list[Record]
         :rtype: None
         """
-        pass
-
-    def settingsPath(self):
-        """
-        :rtype: str
-        """
-        return os.path.join(self.defaultSettingsPath(), self.name() + ".dict")
+        if records:
+            record = records[-1]
+            record.contextMenu(menu)
 
     def setLoggerLevel(self, value):
         """
@@ -118,15 +151,6 @@ class Plugin(studiolibrary.BasePlugin):
         :rtype: studiolibrary.gui.LibraryWidget
         """
         return self.library().libraryWidget()
-
-    def match(self, path):
-        """
-        :type path: str
-        :rtype: bool
-        """
-        if path.endswith(self.extension()):
-            return True
-        return False
 
     def pixmap(self):
         """
@@ -154,14 +178,6 @@ class Plugin(studiolibrary.BasePlugin):
             return "." + self.name().lower()
         return self._extension
 
-    def settings(self):
-        """
-        :rtype: studiolibrary.Settings
-        """
-        if not self._settings:
-            self._settings = studiolibrary.MetaFile(self.settingsPath())
-        return self._settings
-
     def setIconPath(self, path):
         """
         :type path: str
@@ -175,10 +191,8 @@ class Plugin(studiolibrary.BasePlugin):
         """
         return self._iconPath
 
-    def folderSelectionChanged(self, selected, deselected):
+    def folderSelectionChanged(self):
         """
-        :type selected: list[studiolibrary.Folder]
-        :type deselected: list[studiolibrary.Folder]
         :rtype: None
         """
         pass

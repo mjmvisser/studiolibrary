@@ -1,4 +1,4 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary/packages/mutils\node.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary/packages/mutils\node.py
 import mutils
 try:
     import maya.cmds
@@ -7,6 +7,20 @@ except Exception:
     traceback.print_exc()
 
 class Node(object):
+
+    @classmethod
+    def ls(cls, objects = None, selection = False):
+        """
+        nodes = Node.ls(selection=True)
+        :rtype: list[Node]
+        """
+        if objects is None and not selection:
+            objects = maya.cmds.ls()
+        else:
+            objects = objects or []
+            if selection:
+                objects.extend(maya.cmds.ls(selection=True) or [])
+        return [ cls(name) for name in objects ]
 
     def __init__(self, name, attributes = None):
         """
@@ -125,17 +139,3 @@ class Node(object):
         self._shortname = None
         self._namespace = None
         return self.name()
-
-    @classmethod
-    def ls(cls, objects = None, selection = False):
-        """
-        nodes = Node.ls(selection=True)
-        :rtype: list[Node]
-        """
-        if objects is None and not selection:
-            objects = maya.cmds.ls()
-        else:
-            objects = objects or []
-            if selection:
-                objects.extend(maya.cmds.ls(selection=True) or [])
-        return [ cls(name) for name in objects ]

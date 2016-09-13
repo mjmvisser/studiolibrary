@@ -32,7 +32,11 @@
    <string>Form</string>
   </property>
   <property name="styleSheet">
-   <string notr="true"/>
+   <string notr="true">QLineEdit, QPlainTextEdit {
+color: rgb(40, 40, 40);
+border: 0px solid rgb(0, 0, 0, 150);
+background-color: rgb(254, 255, 230, 200);
+}</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="spacing">
@@ -280,9 +284,7 @@ background-color: rgb(254, 255, 230, 200);</string>
         </size>
        </property>
        <property name="styleSheet">
-        <string notr="true">color: rgb(40, 40, 40);
-border: 0px solid rgb(0, 0, 0, 150);
-background-color: rgb(254, 255, 230, 200);</string>
+        <string notr="true"/>
        </property>
       </widget>
      </item>
@@ -397,10 +399,7 @@ background-color: rgb(254, 255, 230, 200);</string>
       </size>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: rgb(40, 40, 40);
-border: 0px solid rgb(0, 0, 0, 150);
-background-color: rgb(254, 255, 230, 200);
-</string>
+      <string notr="true"/>
      </property>
      <property name="plainText">
       <string/>

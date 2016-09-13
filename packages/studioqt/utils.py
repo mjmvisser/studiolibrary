@@ -1,17 +1,23 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary/packages/studioqt\utils.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary/packages/studioqt\utils.py
 import os
 import sys
+import json
 import inspect
 import logging
+import platform
+import subprocess
 import contextlib
-from PySide import QtGui
-from PySide import QtCore
-from PySide import QtUiTools
+from studioqt import QtCore
+from studioqt import QtUiTools
+from studioqt import QtWidgets
 __all__ = ['app',
  'loadUi',
- 'isPySide',
+ 'saveJson',
+ 'readJson',
+ 'openLocation',
  'isAltModifier',
- 'isControlModifier']
+ 'isControlModifier',
+ 'currentScreenGeometry']
 logger = logging.getLogger(__name__)
 
 @contextlib.contextmanager
@@ -28,19 +34,96 @@ def app():
     :rtype: None
     """
     app_ = None
-    isAppRunning = bool(QtGui.QApplication.instance())
+    isAppRunning = bool(QtWidgets.QApplication.instance())
     if not isAppRunning:
-        app_ = QtGui.QApplication(sys.argv)
+        app_ = QtWidgets.QApplication(sys.argv)
     yield
     if not isAppRunning:
         sys.exit(app_.exec_())
 
 
-def isPySide():
+def currentScreenGeometry():
+    """
+    Return the geometry of the screen with the current cursor.
+    
+    :rtype: QtCore.QRect
+    """
+    pos = QtWidgets.QApplication.desktop().cursor().pos()
+    screen = QtWidgets.QApplication.desktop().screenNumber(pos)
+    return QtWidgets.QApplication.desktop().screenGeometry(screen)
+
+
+def system():
+    """
+    :rtype: str
+    """
+    return platform.system().lower()
+
+
+def isMac():
     """
     :rtype: bool
     """
-    return True
+    return system().startswith('mac') or system().startswith('os') or system().startswith('darwin')
+
+
+def isWindows():
+    """
+    :rtype: bool
+    """
+    return system().startswith('win')
+
+
+def isLinux():
+    """
+    :rtype: bool
+    """
+    return system().startswith('lin')
+
+
+def openLocation(path):
+    """
+    :type path: str
+    :rtype: None
+    """
+    if isLinux():
+        os.system('konqueror "%s"&' % path)
+    elif isWindows():
+        os.startfile('%s' % path)
+    elif isMac():
+        subprocess.call(['open', '-R', path])
+
+
+def saveJson(path, data):
+    """
+    Write a python dict to a json file.
+    
+    :type path: str
+    :type data: dict
+    :rtype: None
+    """
+    dirname = os.path.dirname(path)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+    with open(path, 'w') as f:
+        data = json.dumps(data, indent=4)
+        f.write(data)
+
+
+def readJson(path):
+    """
+    Read a json file to a python dict.
+    
+    :type path: str
+    :rtype: dict
+    """
+    data = {}
+    if os.path.exists(path):
+        with open(path, 'r') as f:
+            data_ = f.read()
+            if data_:
+                data = json.loads(data_)
+    return data
 
 
 def uiPath(cls):
@@ -60,7 +143,7 @@ def loadUi(widget, path = None):
     .. code-block:: python
         import studioqt
     
-        class Widget(QtGui.QWidget):
+        class Widget(QtWidgets.QWidget):
             def __init__(self)
                 super(Widget, self).__init__()
                 studioqt.loadUi(self)
@@ -80,7 +163,7 @@ def loadUi(widget, path = None):
 
 def loadUiPySide(widget, path = None):
     """
-    :type widget: QtGui.QWidget
+    :type widget: QtWidgets.QWidget
     :type path: str
     :rtype: None
     """
@@ -90,7 +173,7 @@ def loadUiPySide(widget, path = None):
     f.open(QtCore.QFile.ReadOnly)
     widget.ui = loader.load(path, widget)
     f.close()
-    layout = QtGui.QVBoxLayout()
+    layout = QtWidgets.QVBoxLayout()
     layout.setObjectName('uiLayout')
     layout.addWidget(widget.ui)
     widget.setLayout(layout)
@@ -122,7 +205,7 @@ def isAltModifier():
     
     :rtype: bool
     """
-    modifiers = QtGui.QApplication.keyboardModifiers()
+    modifiers = QtWidgets.QApplication.keyboardModifiers()
     return modifiers == QtCore.Qt.AltModifier
 
 
@@ -130,5 +213,5 @@ def isControlModifier():
     """
     :rtype: bool
     """
-    modifiers = QtGui.QApplication.keyboardModifiers()
+    modifiers = QtWidgets.QApplication.keyboardModifiers()
     return modifiers == QtCore.Qt.ControlModifier

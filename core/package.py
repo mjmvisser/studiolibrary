@@ -1,4 +1,4 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary\core\package.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary\core\package.py
 import re
 from . import utils
 __all__ = ['Package']
@@ -57,8 +57,7 @@ class Package:
 
     def latestVersion(self):
         """
-        :rtype: str
-        :raise:
+        :rtype: str or None
         """
         data = utils.downloadUrl(self.jsonUrl())
         if data:

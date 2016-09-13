@@ -1,4 +1,4 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary/packages/mutils\mirrortable.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary/packages/mutils\mirrortable.py
 """
 #
 # mirrortable.py
@@ -75,14 +75,200 @@ class MirrorTable(mutils.SelectionSet):
         """
         :type objects: list[str]
         """
-        m = cls()
-        m.setMetadata('left', leftSide)
-        m.setMetadata('right', rightSide)
-        m.setMetadata('mirrorPlane', mirrorPlane)
+        mirrorTable = cls()
+        mirrorTable.setMetadata('left', leftSide)
+        mirrorTable.setMetadata('right', rightSide)
+        mirrorTable.setMetadata('mirrorPlane', mirrorPlane)
         for obj in objects:
-            m.add(obj)
+            if maya.cmds.nodeType(obj) == 'transform':
+                mirrorTable.add(obj)
 
-        return m
+        return mirrorTable
+
+    @staticmethod
+    def findLeftSide(objects):
+        """
+        :type objects: str
+        :rtype: str
+        """
+        return MirrorTable.findSide(objects, RE_LEFT_SIDE)
+
+    @staticmethod
+    def findRightSide(objects):
+        """
+        :type objects: str
+        :rtype: str
+        """
+        return MirrorTable.findSide(objects, RE_RIGHT_SIDE)
+
+    @staticmethod
+    def findSide(objects, reSide):
+        """
+        :type objects: str
+        :type reSide: str
+        :rtype: str
+        """
+        reSide = re.compile(reSide)
+        for obj in objects:
+            m = reSide.search(obj)
+            if m:
+                return m.group()
+
+        return ''
+
+    @staticmethod
+    def animCurve(obj, attr):
+        """
+        :type obj: str
+        :type attr: str
+        :rtype: str
+        """
+        connections = maya.cmds.listConnections(obj + '.' + attr, d=False, s=True)
+        if connections:
+            return connections[0]
+
+    @staticmethod
+    def scaleKey(obj, attr):
+        """
+        :type obj: str
+        :type attr: str
+        """
+        curve = MirrorTable.animCurve(obj, attr)
+        if curve:
+            maya.cmds.selectKey(curve)
+            maya.cmds.scaleKey(iub=False, ts=1, fs=1, vs=-1, vp=0, animation='keys')
+
+    @staticmethod
+    def formatValue(attr, value, mirrorAxis):
+        """
+        :type attr: str
+        :type value: float
+        :type mirrorAxis: list[int]
+        :rtype: float
+        """
+        if MirrorTable.isAttrMirrored(attr, mirrorAxis):
+            return value * -1
+        return value
+
+    @staticmethod
+    def maxIndex(numbers):
+        """
+        Finds the largest number in a list
+        :type numbers: list[float] or list[str]
+        :rtype: int
+        """
+        m = 0
+        result = 0
+        for i in numbers:
+            v = abs(float(i))
+            if v > m:
+                m = v
+                result = numbers.index(i)
+
+        return result
+
+    @staticmethod
+    def axisWorldPosition(obj, axis):
+        """
+        :type obj: str
+        :type axis: (int, int, int)
+        :rtype: list[float]
+        """
+        transform1 = maya.cmds.createNode('transform', name='transform1')
+        try:
+            transform1, = maya.cmds.parent(transform1, obj, r=True)
+            maya.cmds.setAttr((transform1 + '.t'), *axis)
+            maya.cmds.setAttr(transform1 + '.r', 0, 0, 0)
+            maya.cmds.setAttr(transform1 + '.s', 1, 1, 1)
+            return maya.cmds.xform(transform1, q=True, ws=True, piv=True)
+        finally:
+            maya.cmds.delete(transform1)
+
+    @staticmethod
+    def isAttrMirrored(attr, mirrorAxis):
+        """
+        :type attr: str
+        :type mirrorAxis: list[int]
+        :rtype: float
+        """
+        if mirrorAxis == [-1, 1, 1]:
+            if attr == 'translateX' or attr == 'rotateY' or attr == 'rotateZ':
+                return True
+        elif mirrorAxis == [1, -1, 1]:
+            if attr == 'translateY' or attr == 'rotateX' or attr == 'rotateZ':
+                return True
+        elif mirrorAxis == [1, 1, -1]:
+            if attr == 'translateZ' or attr == 'rotateX' or attr == 'rotateY':
+                return True
+        elif mirrorAxis == [-1, -1, -1]:
+            if attr == 'translateX' or attr == 'translateY' or attr == 'translateZ':
+                return True
+        return False
+
+    @staticmethod
+    def isAxisMirrored(srcObj, dstObj, axis, mirrorPlane):
+        """
+        :type srcObj: str
+        :type dstObj: str
+        :type axis: (int, int, int)
+        :type mirrorPlane: list[int]
+        :rtype: int
+        """
+        old1 = maya.cmds.xform(srcObj, q=True, ws=True, piv=True)
+        old2 = maya.cmds.xform(dstObj, q=True, ws=True, piv=True)
+        new1 = MirrorTable.axisWorldPosition(srcObj, axis)
+        new2 = MirrorTable.axisWorldPosition(dstObj, axis)
+        mp = mirrorPlane
+        v1 = (mp[0] * (new1[0] - old1[0]), mp[1] * (new1[1] - old1[1]), mp[2] * (new1[2] - old1[2]))
+        v2 = (new2[0] - old2[0], new2[1] - old2[1], new2[2] - old2[2])
+        d = sum((p * q for p, q in zip(v1, v2)))
+        if d >= 0.0:
+            return False
+        return True
+
+    @staticmethod
+    def _calculateMirrorAxis(obj, mirrorPlane):
+        """
+        :type obj: str
+        :rtype: list[int]
+        """
+        result = [1, 1, 1]
+        transform0 = maya.cmds.createNode('transform', name='transform0')
+        try:
+            transform0, = maya.cmds.parent(transform0, obj, r=True)
+            transform0, = maya.cmds.parent(transform0, w=True)
+            maya.cmds.setAttr(transform0 + '.t', 0, 0, 0)
+            t1 = MirrorTable.axisWorldPosition(transform0, [1, 0, 0])
+            t2 = MirrorTable.axisWorldPosition(transform0, [0, 1, 0])
+            t3 = MirrorTable.axisWorldPosition(transform0, [0, 0, 1])
+            t1 = ('%.3f' % t1[0], '%.3f' % t1[1], '%.3f' % t1[2])
+            t2 = ('%.3f' % t2[0], '%.3f' % t2[1], '%.3f' % t2[2])
+            t3 = ('%.3f' % t3[0], '%.3f' % t3[1], '%.3f' % t3[2])
+            if mirrorPlane == MirrorPlane.YZ:
+                x = [t1[0], t2[0], t3[0]]
+                i = MirrorTable.maxIndex(x)
+                result[i] = -1
+            if mirrorPlane == MirrorPlane.XZ:
+                y = [t1[1], t2[1], t3[1]]
+                i = MirrorTable.maxIndex(y)
+                result[i] = -1
+            if mirrorPlane == MirrorPlane.XY:
+                z = [t1[2], t2[2], t3[2]]
+                i = MirrorTable.maxIndex(z)
+                result[i] = -1
+        finally:
+            maya.cmds.delete(transform0)
+
+        return result
+
+    def setPath(self, path):
+        """
+        :type path: str
+        :rtype: None
+        """
+        if path.endswith('.mirror'):
+            path += '/mirrortable.json'
+        mutils.TransferBase.setPath(self, path)
 
     def leftSide(self):
         """
@@ -133,37 +319,6 @@ class MirrorTable(mutils.SelectionSet):
         """
         result = {'mirrorAxis': self.calculateMirrorAxis(name)}
         return result
-
-    @staticmethod
-    def findLeftSide(objects):
-        """
-        :type objects: str
-        :rtype: str
-        """
-        return MirrorTable.findSide(objects, RE_LEFT_SIDE)
-
-    @staticmethod
-    def findRightSide(objects):
-        """
-        :type objects: str
-        :rtype: str
-        """
-        return MirrorTable.findSide(objects, RE_RIGHT_SIDE)
-
-    @staticmethod
-    def findSide(objects, reSearch):
-        """
-        :type objects: str
-        :type reSearch: str
-        :rtype: str
-        """
-        reSearch = re.compile(reSearch)
-        for obj in objects:
-            right = reSearch.search(obj)
-            if right:
-                return right.group()
-
-        return ''
 
     def matchObjects(self, objects = None, namespaces = None, selection = False, callback = None):
         """
@@ -341,137 +496,64 @@ class MirrorTable(mutils.SelectionSet):
         else:
             return True
 
-    @staticmethod
-    def animCurve(obj, attr):
+    def isLeftSide(self, name):
         """
-        :type obj: str
-        :type attr: str
-        :rtype: str
-        """
-        connections = maya.cmds.listConnections(obj + '.' + attr, d=False, s=True)
-        if connections:
-            return connections[0]
-
-    @staticmethod
-    def scaleKey(obj, attr):
-        """
-        :type obj: str
-        :type attr: str
-        """
-        curve = MirrorTable.animCurve(obj, attr)
-        if curve:
-            maya.cmds.selectKey(curve)
-            maya.cmds.scaleKey(iub=False, ts=1, fs=1, vs=-1, vp=0, animation='keys')
-
-    @staticmethod
-    def isAttrMirrored(attr, mirrorAxis):
-        """
-        :type attr: str
-        :type mirrorAxis: list[int]
-        :rtype: float
-        """
-        if mirrorAxis == [-1, 1, 1]:
-            if attr == 'translateX' or attr == 'rotateY' or attr == 'rotateZ':
-                return True
-        elif mirrorAxis == [1, -1, 1]:
-            if attr == 'translateY' or attr == 'rotateX' or attr == 'rotateZ':
-                return True
-        elif mirrorAxis == [1, 1, -1]:
-            if attr == 'translateZ' or attr == 'rotateX' or attr == 'rotateY':
-                return True
-        elif mirrorAxis == [-1, -1, -1]:
-            if attr == 'translateX' or attr == 'translateY' or attr == 'translateZ':
-                return True
-        return False
-
-    @staticmethod
-    def formatValue(attr, value, mirrorAxis):
-        """
-        :type attr: str
-        :type value: float
-        :type mirrorAxis: list[int]
-        :rtype: float
-        """
-        if MirrorTable.isAttrMirrored(attr, mirrorAxis):
-            return value * -1
-        return value
-
-    def isLeftSide(self, obj):
-        """
+        Return True if the object contains the left side string.
+        
+        # Group|Character1:footRollExtra_L|Character1:footRoll_L
+        # Group|footRollExtra_L|footRoll_LShape
+        # footRoll_L
+        # footRoll_LShape
+        
         :type obj: str
         :rtype: bool
         """
-        left = self.leftSide()
-        if left:
-            if len(left) == 1:
-                return self.replaceSingleSide(obj, left, 'X') != obj
-            return left in obj
-        return False
+        side = self.leftSide()
+        return self.matchSide(name, side)
 
-    def isRightSide(self, obj):
+    def isRightSide(self, name):
         """
-        :type obj: str
+        Return True if the object contains the right side string.
+        
+        # Group|Character1:footRollExtra_R|Character1:footRoll_R
+        # Group|footRollExtra_R|footRoll_RShape
+        # footRoll_R
+        # footRoll_RShape
+        
+        :type name: str
         :rtype: bool
         """
-        right = self.rightSide()
-        if right:
-            if len(right) == 1:
-                return self.replaceSingleSide(obj, right, 'X') != obj
-            return right in obj
-        return False
+        side = self.rightSide()
+        return self.matchSide(name, side)
 
-    def replaceSingleSide(self, srcObj, search, replace):
+    def matchSide(self, name, side):
         """
-        If the left and right naming convention is only one character.
-        eg: "L" and "R". We then replace only the start or end of the
-        name eg: R_footRoll -> L_footRoll NOT L_footLoll.
+        Return True if the name contains the given side.
         
-        Group|Character1:LfootRollExtra|Character1:LfootRoll
-        :R
-        Group|Character1:footRollExtraR|Character1:footRollR
-        R|
-        
-        :type srcObj: str
-        :type search: str
-        :type replace: str
-        :rtype: str
+        :type name: str
+        :type side: str
+        :rtype: bool
         """
-        dstObj = srcObj
-        if ':' in srcObj:
-            dstObj = srcObj.replace(':' + search, ':' + replace)
-            if srcObj != dstObj:
-                return dstObj
-        if '|' in srcObj:
-            dstObj = srcObj.replace('|' + search, '|' + replace)
-        if srcObj.startswith(search):
-            dstObj = replace + srcObj[1:]
-        if srcObj != dstObj:
-            return dstObj
-        if '|' in srcObj:
-            dstObj = srcObj.replace(search + '|', replace + '|')
-        if dstObj.endswith(search):
-            dstObj = dstObj[:-1] + replace
-        if srcObj != dstObj:
-            return dstObj
-        return dstObj
+        if side:
+            return side in obj
+        return False
 
     def mirrorObject(self, srcObj):
         """
+        Return the other/opposite side for the given name.
+        
+        Example:
+            print self.mirrorObject("FKSholder_L")
+            # FKShoulder_R
+        
         :type srcObj: str
-        :rtype: str
+        :rtype: str or None
         """
-        left = self.leftSide()
-        right = self.rightSide()
-        if len(left) == 1 and len(right) == 1:
-            dstObj = self.replaceSingleSide(srcObj, left, right)
-            if dstObj != srcObj:
-                return dstObj
-            dstObj = self.replaceSingleSide(srcObj, right, left)
-            if dstObj != srcObj:
-                return dstObj
-        dstObj = srcObj.replace(self.leftSide(), self.rightSide())
+        leftSide = self.leftSide()
+        rightSide = self.rightSide()
+        dstObj = srcObj.replace(leftSide, rightSide)
         if dstObj == srcObj:
-            dstObj = srcObj.replace(self.rightSide(), self.leftSide())
+            dstObj = srcObj.replace(rightSide, leftSide)
         if dstObj != srcObj:
             return dstObj
 
@@ -486,97 +568,10 @@ class MirrorTable(mutils.SelectionSet):
         if dstObj == srcObj or not maya.cmds.objExists(dstObj):
             result = MirrorTable._calculateMirrorAxis(srcObj, mirrorPlane)
         else:
-            result[0] = MirrorTable.isAxisMirrored(srcObj, dstObj, [1, 0, 0], mirrorPlane)
-            result[1] = MirrorTable.isAxisMirrored(srcObj, dstObj, [0, 1, 0], mirrorPlane)
-            result[2] = MirrorTable.isAxisMirrored(srcObj, dstObj, [0, 0, 1], mirrorPlane)
-        return result
-
-    @staticmethod
-    def maxIndex(l):
-        """
-        Finds the largest number in a list
-        :type l: list
-        :rtype: int
-        """
-        m = 0
-        index = 0
-        for i in l:
-            v = abs(float(i))
-            if v > m:
-                m = v
-                index = l.index(i)
-
-        return index
-
-    @staticmethod
-    def axisWorldPosition(obj, t):
-        """
-        :type obj: str
-        :type t: (int, int, int)
-        :rtype: list[float]
-        """
-        transform1 = maya.cmds.createNode('transform', name='transform1')
-        try:
-            transform1, = maya.cmds.parent(transform1, obj, r=True)
-            maya.cmds.setAttr((transform1 + '.t'), *t)
-            maya.cmds.setAttr(transform1 + '.r', 0, 0, 0)
-            maya.cmds.setAttr(transform1 + '.s', 1, 1, 1)
-            return maya.cmds.xform(transform1, q=True, ws=True, piv=True)
-        finally:
-            maya.cmds.delete(transform1)
-
-    @staticmethod
-    def isAxisMirrored(srcObj, dstObj, t, mirrorPlane):
-        """
-        :type srcObj: str
-        :type dstObj: str
-        :type t:
-        :type mirrorPlane: list[int]
-        :rtype: int
-        """
-        old1 = maya.cmds.xform(srcObj, q=True, ws=True, piv=True)
-        old2 = maya.cmds.xform(dstObj, q=True, ws=True, piv=True)
-        new1 = MirrorTable.axisWorldPosition(srcObj, t)
-        new2 = MirrorTable.axisWorldPosition(dstObj, t)
-        mp = mirrorPlane
-        v1 = (mp[0] * (new1[0] - old1[0]), mp[1] * (new1[1] - old1[1]), mp[2] * (new1[2] - old1[2]))
-        v2 = (new2[0] - old2[0], new2[1] - old2[1], new2[2] - old2[2])
-        d = sum((p * q for p, q in zip(v1, v2)))
-        if d >= 0.0:
-            return 1
-        return -1
-
-    @staticmethod
-    def _calculateMirrorAxis(obj, mirrorPlane):
-        """
-        :type obj: str
-        :rtype: list[int]
-        """
-        result = [1, 1, 1]
-        transform0 = maya.cmds.createNode('transform', name='transform0')
-        try:
-            transform0, = maya.cmds.parent(transform0, obj, r=True)
-            transform0, = maya.cmds.parent(transform0, w=True)
-            maya.cmds.setAttr(transform0 + '.t', 0, 0, 0)
-            t1 = MirrorTable.axisWorldPosition(transform0, [1, 0, 0])
-            t2 = MirrorTable.axisWorldPosition(transform0, [0, 1, 0])
-            t3 = MirrorTable.axisWorldPosition(transform0, [0, 0, 1])
-            t1 = ('%.3f' % t1[0], '%.3f' % t1[1], '%.3f' % t1[2])
-            t2 = ('%.3f' % t2[0], '%.3f' % t2[1], '%.3f' % t2[2])
-            t3 = ('%.3f' % t3[0], '%.3f' % t3[1], '%.3f' % t3[2])
-            if mirrorPlane == MirrorPlane.YZ:
-                x = [t1[0], t2[0], t3[0]]
-                i = MirrorTable.maxIndex(x)
-                result[i] = -1
-            if mirrorPlane == MirrorPlane.XZ:
-                y = [t1[1], t2[1], t3[1]]
-                i = MirrorTable.maxIndex(y)
-                result[i] = -1
-            if mirrorPlane == MirrorPlane.XY:
-                z = [t1[2], t2[2], t3[2]]
-                i = MirrorTable.maxIndex(z)
-                result[i] = -1
-        finally:
-            maya.cmds.delete(transform0)
-
+            if MirrorTable.isAxisMirrored(srcObj, dstObj, [1, 0, 0], mirrorPlane):
+                result[0] = -1
+            if MirrorTable.isAxisMirrored(srcObj, dstObj, [0, 1, 0], mirrorPlane):
+                result[1] = -1
+            if MirrorTable.isAxisMirrored(srcObj, dstObj, [0, 0, 1], mirrorPlane):
+                result[2] = -1
         return result

@@ -1,4 +1,4 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary\core\settings.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary\core\settings.py
 import os
 from . import metafile
 __all__ = ['Settings']
@@ -12,7 +12,6 @@ class Settings(metafile.MetaFile):
         """
         :type scope: str
         :type name: str
-        
         :rtype: Settings
         """
         key = scope + '/' + name

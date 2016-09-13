@@ -1,9 +1,32 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary/packages/studioqt\stylesheet.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary/packages/studioqt\stylesheet.py
 import os
 import re
 import studioqt
 
 class StyleSheet(object):
+
+    @classmethod
+    def fromPath(cls, path, **kwargs):
+        """
+        :type path: str
+        :rtype: str
+        """
+        styleSheet = cls()
+        data = styleSheet.read(path)
+        data = StyleSheet.format(data, **kwargs)
+        styleSheet.setData(data)
+        return styleSheet
+
+    @classmethod
+    def fromText(cls, text, options = None):
+        """
+        :type text: str
+        :rtype: str
+        """
+        styleSheet = cls()
+        data = StyleSheet.format(text, options=options)
+        styleSheet.setData(data)
+        return styleSheet
 
     def __init__(self):
         self._data = ''
@@ -20,45 +43,20 @@ class StyleSheet(object):
         """
         return self._data
 
-    @classmethod
-    def fromPath(cls, path, options = None):
-        """
-        :type path: str
-        :rtype: str
-        """
-        styleSheet = cls()
-        data = styleSheet.read(path)
-        data = StyleSheet.format(data, options=options)
-        styleSheet.setData(data)
-        return styleSheet
-
-    @classmethod
-    def fromText(cls, text, options = None):
-        """
-        :type text: str
-        :rtype: str
-        """
-        styleSheet = cls()
-        data = StyleSheet.format(text, options=options)
-        styleSheet.setData(data)
-        return styleSheet
-
     @staticmethod
     def read(path):
         """
         :type path: str
         :rtype: str
         """
-        p = path
         data = ''
-        if p is not None and os.path.exists(p):
-            f = open(p, 'r')
-            data = f.read()
-            f.close()
+        if os.path.isfile(path):
+            with open(path, 'r') as f:
+                data = f.read()
         return data
 
     @staticmethod
-    def format(data = None, options = None):
+    def format(data = None, options = None, dpi = 1):
         """
         :type data:
         :type options: dict
@@ -73,11 +71,11 @@ class StyleSheet(object):
         reDpi = re.compile('[0-9]+[*]DPI')
         newData = []
         for line in data.split('\n'):
-            dpi = reDpi.search(line)
-            if dpi:
-                new = dpi.group().replace('DPI', str(studioqt.DPI))
+            dpi_ = reDpi.search(line)
+            if dpi_:
+                new = dpi_.group().replace('DPI', str(dpi))
                 val = int(eval(new))
-                line = line.replace(dpi.group(), str(val))
+                line = line.replace(dpi_.group(), str(val))
             newData.append(line)
 
         data = '\n'.join(newData)

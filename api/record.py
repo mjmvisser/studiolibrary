@@ -18,10 +18,10 @@ import os
 import shutil
 import logging
 
-from PySide import QtGui
-from PySide import QtCore
+from studioqt import QtGui
+from studioqt import QtCore
+from studioqt import QtWidgets
 
-import studioqt
 import studiolibrary
 
 
@@ -51,9 +51,9 @@ class RecordSignal(QtCore.QObject):
     onDeleting = QtCore.Signal(object)
 
 
-class Record(studiolibrary.MasterPath, studioqt.ListWidgetItem):
+class Record(studiolibrary.BasePath, studiolibrary.LibraryItem):
 
-    META_PATH = "<PATH>/.studioLibrary/record.dict"
+    META_PATH = "{path}/.studioLibrary/record.json"
 
     signal = RecordSignal()
     onSaved = signal.onSaved
@@ -65,45 +65,40 @@ class Record(studiolibrary.MasterPath, studioqt.ListWidgetItem):
     @classmethod
     def fromPath(cls, path, **kwargs):
         """
+        :type path: str
         :rtype: Record
         """
         return cls(path, **kwargs)
 
     def __init__(
-            self,
-            path=None,
-            plugin=None,
-            library=None,
+        self,
+        path=None,
+        plugin=None,
+        library=None,
     ):
         """
         :type path: str or None
         :type plugin: studiolibrary.Plugin or None
         :type library: studiolibrary.Library or None
         """
+        self._error = ""
         self._plugin = plugin
         self._library = library
-        self._searchText = None
-        self._pluginPixmap = None
+        self._metaFile = None
+        self._iconPath = None
 
         self.setPlugin(plugin)
 
-        studioqt.ListWidgetItem.__init__(self)
-        studiolibrary.MasterPath.__init__(self, path)
+        studiolibrary.LibraryItem.__init__(self)
+        studiolibrary.BasePath.__init__(self, path)
 
-    def url(self):
-        url = QtCore.QUrl()
-        url.setPath(self.path())
-        return url
-
-    def infoWidget(self, parent=None):
-        if self.plugin():
-            return self.plugin().infoWidget(parent=parent, record=self)
+        self.setPlugin(plugin)  # So that the type icon is set
 
     def library(self):
         """
         :rtype: studiolibrary.Library
         """
-        return self._library
+        return self._library or self.plugin().library()
 
     def libraryWidget(self):
         """
@@ -112,31 +107,172 @@ class Record(studiolibrary.MasterPath, studioqt.ListWidgetItem):
         if self.library():
             return self.library().libraryWidget()
 
-    def searchText(self):
-        if not self._searchText:
-            self._searchText = str(self.path().lower())
-        return self._searchText
+    def setIconPath(self, path):
+        """
+        Set the icon path for the current record.
 
-    def clicked(self):
+        :type path: str
+        :rtype: None
+        """
+        self._iconPath = path
+        self.setIcon("Icon", path)
+
+    def iconPath(self):
+        """
+        Return the icon path for the current record.
+
+        :type path: str
+        :rtype: None
+        """
+        return self._iconPath
+
+    def errorString(self):
+        """
+        Return the text string that explains why the record didn't save.
+
+        :rtype: str
+        """
+        return self._error
+
+    def setErrorString(self, error):
+        """
+        Set the error string to be raised on saving.
+
+        :type error: str
+        :rtype: None
+        """
+        self._error = error
+
+    def delete(self):
         """
         :rtype: None
         """
-        pass
+        raise Exception("Deleting files is not supported!")
 
-    def contextMenu(self, menu, records):
+    def mimeText(self):
+        return self.text("Path")
+
+    def url(self):
         """
-        :type menu: QtGui.QMenu
-        :type records: list[Record]
+        :rtype: str
+        """
+        return QtCore.QUrl.fromLocalFile(self.path())
+
+    def infoWidget(self, parent=None):
+        """
+        :rtype: str
+        """
+        if self.plugin():
+            return self.plugin().infoWidget(parent=parent, record=self)
+
+    def setPath(self, path):
+        """
+        :type path: str
         :rtype: None
         """
-        pass
+        if not path:
+            raise RecordError('Cannot set empty record path.')
 
-    def selectionChanged(self, selected, deselected):
+        plugin = self.plugin()
+
+        dirname, basename, extension = studiolibrary.splitPath(path)
+
+        iconPath = path + "/thumbnail.jpg"
+
+        name = os.path.basename(path)
+        category = os.path.basename(dirname)
+
+        self.setIconPath(iconPath)
+        self.setText("Icon", name)
+        self.setText("Name", name)
+        self.setText("Path", path)
+        self.setText("Category", category)
+
+        if os.path.exists(path):
+            modified = os.path.getmtime(path)
+            timeAgo = studiolibrary.timeAgo(modified)
+
+            self.setText("Modified", timeAgo)
+            self.setSortText("Modified", str(modified))
+
+        if extension:
+            if plugin:
+                if extension != plugin.extension():
+                    path += plugin.extension()
+        else:
+            if plugin:
+                path += plugin.extension()
+            else:
+                raise RecordSaveError('No extension found!')
+
+        if plugin:
+            self.setText("Type", plugin.extension())
+
+        studiolibrary.BasePath.setPath(self, path)
+
+    def plugin(self):
         """
-        :type selected: list[Record]
-        :type deselected: list[Record]
+        :rtype: studiolibrary.Plugin
         """
-        pass
+        return self._plugin
+
+    def setPlugin(self, plugin):
+        """
+        :type plugin: studiolibrary.Plugin
+        """
+        self._plugin = plugin
+        if plugin:
+            self.setTypeIconPath(plugin.iconPath())
+
+    def load(self):
+        """
+        :rtype: None
+        """
+        logger.debug('Loading "{0}"'.format(self.name()))
+        Record.onLoaded.emit(self)
+
+    def moveContents(self, contents):
+        """
+        :type contents: list[str]
+        """
+        path = self.path()
+
+        for src in contents or []:
+            basename = os.path.basename(src)
+            dst = path + "/" + basename
+            logger.info('Moving Content: {0} => {1}'.format(src, dst))
+            shutil.move(src, dst)
+
+    def save(self, path=None, contents=None):
+        """
+        :type path: str
+        :type contents: list[str]
+        :rtype: None
+        """
+        path = path or self.path()
+        contents = contents or []
+
+        self.setPath(path)
+        self.setErrorString("")  # Clear the existing error string.
+
+        logger.debug('Record Saving: {0}'.format(path))
+        Record.onSaving.emit(self)
+
+        if self.errorString():
+            raise RecordSaveError(self.errorString())
+
+        elif os.path.exists(self.path()):
+            raise RecordSaveError("Record already exists!")
+
+        self.metaFile().save()
+        self.moveContents(contents)
+
+        Record.onSaved.emit(self)
+        logger.debug('Record Saved: {0}'.format(self.path()))
+
+    # -----------------------------------------------------------------
+    # Support for renaming
+    # -----------------------------------------------------------------
 
     def rename(self, name, extension=None, force=True):
         """
@@ -148,59 +284,35 @@ class Record(studiolibrary.MasterPath, studioqt.ListWidgetItem):
         extension = extension or self.extension()
         if name and extension not in name:
             name += extension
-        studiolibrary.MasterPath.rename(self, name, force=force)
+        studiolibrary.BasePath.rename(self, name, force=force)
 
-    def setPath(self, path):
+    def showRenameDialog(self, parent=None):
         """
-        :type path: str
-        :rtype: None
+        :type parent: QtWidgets.QWidget
         """
-        if not path:
-            raise RecordError('Cannot set empty record path.')
+        parent = parent or self.library()
+        name, accepted = QtWidgets.QInputDialog.getText(
+            parent,
+            "Rename",
+            "New Name",
+            QtWidgets.QLineEdit.Normal,
+            self.name()
+        )
 
-        text = os.path.basename(path)
-        iconPath = path + "/thumbnail.jpg"
+        if accepted:
+            self.rename(str(name))
 
-        self.setText(text)
-        self.setIconPath(iconPath)
+        return accepted
 
-        dirname, basename, extension = studiolibrary.splitPath(path)
-
-        if extension:
-            if self.plugin():
-                if extension != self.plugin().extension():
-                    path += self.plugin().extension()
-        else:
-            if self.plugin():
-                path += self.plugin().extension()
-            else:
-                raise RecordSaveError('No extension found!')
-
-        studiolibrary.MasterPath.setPath(self, path)
-
-    def setPlugin(self, plugin):
-        """
-        :type : studiolibrary.Plugin
-        """
-        self._plugin = plugin
-
-    def plugin(self):
-        """
-        :rtype : studiolibrary.Plugin
-        """
-        return self._plugin
-
-    def errors(self):
-        """
-        :rtype: str
-        """
-        return self.metaFile().errors()
+    # -----------------------------------------------------------------
+    # Support for meta data
+    # -----------------------------------------------------------------
 
     def description(self):
         """
         :rtype: str
         """
-        return self.metaFile().description()
+        return self.metaFile().get('description', "")
 
     def setDescription(self, text):
         """
@@ -220,150 +332,23 @@ class Record(studiolibrary.MasterPath, studioqt.ListWidgetItem):
         """
         return self.metaFile().get('owner', "")
 
-    def mtime(self):
+    def metaPath(self):
         """
         :rtype: str
         """
-        return self.metaFile().mtime()
+        path = self.META_PATH
+        return self.resolvePath(path)
 
-    def ctime(self):
+    def metaFile(self):
         """
-        :rtype: str
+        :rtype: metafile.MetaFile
         """
-        return self.metaFile().ctime()
+        path = self.metaPath()
 
-    def delete(self):
-        """
-        The default delete behaviour is to retire and create a version
-        of the record. The record/path never gets deleted from the file
-        system.
+        if self._metaFile:
+            if self._metaFile.path() != path:
+                self._metaFile.setPath(path)
+        else:
+            self._metaFile = studiolibrary.MetaFile(path, read=True)
 
-        :rtype: None
-        """
-        logger.debug('Record Deleting: {0}'.format(self.path()))
-        Record.onDeleting.emit(self)
-        studiolibrary.MasterPath.delete(self)
-        Record.onDeleted.emit(self)
-        logger.debug('Record Deleted: {0}'.format(self.path()))
-
-    def moveContents(self, contents, destination=None):
-        """
-        :type contents: list[str]
-        """
-        if not destination:
-            destination = self.path()
-
-        for src in contents or []:
-            basename = os.path.basename(src)
-            dst = destination + "/" + basename
-            logger.info('Moving Content: {0} => {1}'.format(src, dst))
-            shutil.move(src, dst)
-
-    def load(self):
-        """
-        :rtype: None
-        """
-        logger.debug('Loading "{0}"'.format(self.name()))
-        Record.onLoaded.emit(self)
-
-    def save(self, path=None, contents=None, force=False):
-        """
-        :type contents: list[str]
-        :type force: bool
-        """
-        path = path or self.path()
-        contents = contents or []
-
-        logger.debug('Record Saving: {0}'.format(path))
-        Record.onSaving.emit(self)
-
-        self.setPath(path)
-
-        if os.path.exists(self.path()):
-
-            if force:
-                self.delete()
-
-            elif self.library():
-                result = self.showRetireDialog()
-                if result != QtGui.QMessageBox.Yes:
-                    logger.debug('Dialog Canceled')
-                    return
-            else:
-                raise RecordSaveError("Record already exists!")
-
-        self.metaFile().save()
-        self.moveContents(contents)
-
-        Record.onSaved.emit(self)
-        logger.debug('Record Saved: {0}'.format(self.path()))
-
-    def showRetireDialog(self, parent=None):
-        """
-        :type parent: QtGui.QWidget
-        """
-        parent = parent or self.listWidget()
-
-        msg = 'The chosen name "{0}" already exists!\n' \
-              'Would you like to create a new version?'.format(self.name())
-
-        result = QtGui.QMessageBox.question(
-            parent,
-            "Retire Record?",
-            msg,
-            QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel
-        )
-
-        if result == QtGui.QMessageBox.Yes:
-            self.delete()
-        return result
-
-    def showRenameDialog(self, parent=None):
-        """
-        :type parent: QtGui.QWidget
-        """
-        parent = parent or self.library()
-        name, accepted = QtGui.QInputDialog.getText(parent, "Rename", "New Name",
-                                                    QtGui.QLineEdit.Normal, self.name(),)
-        if accepted:
-            self.rename(str(name))
-        return accepted
-
-    def pluginIconRect(self, option):
-        """
-        :rtype: QtGui.QRect
-        """
-        padding = 2 * self.dpi()
-        r = self.iconRect(option)
-
-        x = r.x() + padding
-        y = r.y() + padding
-        rect = QtCore.QRect(x, y, 13 * self.dpi(), 13 * self.dpi())
-
-        return rect
-
-    def paintPluginIcon(self, painter, option):
-        """
-        :type painter: QtGui.QPainter
-        :type option:
-        """
-        rect = self.pluginIconRect(option)
-
-        if not self._pluginPixmap:
-            self._pluginPixmap = self.plugin().pixmap()
-
-        if self._pluginPixmap:
-            painter.setOpacity(0.5)
-            painter.drawPixmap(rect, self._pluginPixmap)
-
-    def paint(self, painter, option, index):
-        """
-        :type painter: QtGui.QPainter
-        :type option:
-        """
-        studioqt.ListWidgetItem.paint(self, painter, option, index)
-        painter.save()
-        try:
-            self.paintPluginIcon(painter, option)
-        finally:
-            painter.restore()
+        return self._metaFile

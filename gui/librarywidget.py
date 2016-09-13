@@ -1,43 +1,44 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary\gui\librarywidget.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary\gui\librarywidget.py
+import re
+import os
 import time
 import logging
 from functools import partial
-from PySide import QtGui
-from PySide import QtCore
+from studioqt import QtGui
+from studioqt import QtCore
+from studioqt import QtWidgets
 import studioqt
 import studiolibrary
 __all__ = ['LibraryWidget']
 logger = logging.getLogger(__name__)
 
-class LibraryWidget(studiolibrary.MayaDockWidgetMixin, QtGui.QWidget):
+class PreviewFrame(QtWidgets.QFrame):
+    pass
 
-    @staticmethod
-    def generateUniqueObjectName(name):
-        """
-        :type name: str
-        :rtype: str
-        """
-        names = [ w.objectName() for w in studiolibrary.Library.windows() ]
-        return studiolibrary.generateUniqueName(name, names)
 
-    def setUniqueObjectName(self, name):
-        """
-        :type name: str
-        :rtype: None
-        """
-        uniqueName = self.generateUniqueObjectName(name)
-        self.setObjectName(uniqueName)
+class FoldersFrame(QtWidgets.QFrame):
+    pass
+
+
+class LibraryWidget(studiolibrary.MayaDockWidgetMixin, QtWidgets.QWidget):
+    DPI_ENABLED = False
+    TRASH_ENABLED = True
+    MIN_SLIDER_DPI = 80
+    MAX_SLIDER_DPI = 250
+    folderPathSelected = QtCore.Signal(str)
 
     def __init__(self, library):
         """
         :type library: studiolibrary.Library
         """
-        QtGui.QWidget.__init__(self, None)
+        QtWidgets.QWidget.__init__(self, None)
         studiolibrary.MayaDockWidgetMixin.__init__(self, None)
-        studioqt.loadUi(self)
         logger.info("Loading library window '{0}'".format(library.name()))
-        self.setUniqueObjectName('studiolibrary')
+        self.setObjectName('studiolibrary')
         studiolibrary.analytics().logScreen('MainWindow')
+        resource = studiolibrary.resource()
+        self.setWindowIcon(resource.icon('icon_black'))
+        self._dpi = 1.0
         self._pSize = None
         self._pShow = None
         self._library = None
@@ -46,412 +47,365 @@ class LibraryWidget(studiolibrary.MayaDockWidgetMixin, QtGui.QWidget):
         self._isLoaded = False
         self._showFolders = False
         self._updateThread = None
-        self._showLabelsAction = True
-        self._saveSettingsOnClose = True
-        self.ui.dialogWidget = None
-        self.ui.createWidget = None
-        self.ui.previewWidget = None
-        self._isFoldersWidgetVisible = True
-        self._isPreviewWidgetVisible = True
-        self._isMenuBarWidgetVisible = True
-        self._isStatusBarWidgetVisible = True
-        self.ui.previewFrame = QtGui.QFrame(self)
-        self.ui.statusWidget = studiolibrary.StatusWidget(self)
-        self.ui.recordsWidget = studioqt.ListWidget(self)
-        self.ui.foldersWidget = studiolibrary.FoldersWidget(self)
+        self._previewWidget = None
+        self._loaderEnabled = True
+        self._recursiveSearchEnabled = True
+        self._trashEnabled = self.TRASH_ENABLED
+        self._itemsHiddenCount = 0
+        self._itemsVisibleCount = 0
+        self._isTrashFolderVisible = False
+        self._foldersWidgetVisible = True
+        self._previewWidgetVisible = True
+        self._statusBarWidgetVisible = True
+        self._foldersFrame = FoldersFrame(self)
+        self._previewFrame = PreviewFrame(self)
+        self._itemsWidget = self.createItemsWidget()
+        tip = 'Search all current items.'
+        self._searchWidget = studioqt.SearchWidget(self)
+        self._searchWidget.setToolTip(tip)
+        self._searchWidget.setStatusTip(tip)
+        self._statusWidget = studioqt.StatusWidget(self)
+        self._menuBarWidget = studioqt.MenuBarWidget()
+        self._foldersWidget = self.createFoldersWidget()
         self.setMinimumWidth(5)
         self.setMinimumHeight(5)
-        pixmap = studioqt.pixmap('settings', color=self.iconColor())
-        self.ui.settingsButton.setIconSize(QtCore.QSize(26, 26))
-        self.ui.settingsButton.setIcon(pixmap)
-        pixmap = studioqt.pixmap('add', color=self.iconColor())
-        self.ui.createButton.setIconSize(QtCore.QSize(32, 32))
-        self.ui.createButton.setIcon(pixmap)
-        self.ui.updateButton.hide()
-        self.layout().setContentsMargins(0, 0, 0, 0)
-        self.ui.splitter = QtGui.QSplitter(QtCore.Qt.Horizontal, self)
-        self.ui.splitter.setHandleWidth(1)
-        self.ui.splitter.setChildrenCollapsible(False)
-        self.ui.viewLayout.insertWidget(1, self.ui.splitter)
-        self.ui.splitter.insertWidget(0, self.ui.foldersWidget)
-        self.ui.splitter.insertWidget(1, self.ui.recordsWidget)
-        self.ui.splitter.setStretchFactor(0, False)
-        self.ui.splitter.setStretchFactor(2, False)
-        vbox = QtGui.QVBoxLayout()
-        self.ui.previewFrame.setLayout(vbox)
-        self.ui.previewFrame.layout().setSpacing(0)
-        self.ui.previewFrame.layout().setContentsMargins(0, 0, 0, 0)
-        self.ui.previewFrame.setMinimumWidth(5)
-        self.ui.viewLayout.insertWidget(2, self.ui.previewFrame)
-        self.ui.splitter.insertWidget(2, self.ui.previewFrame)
-        self.ui.statusLayout.addWidget(self.ui.statusWidget)
-        self.ui.updateButton.clicked.connect(self.help)
-        self.ui.createButton.clicked.connect(self.showNewMenu)
-        self.ui.settingsButton.clicked.connect(self.showSettingsMenu)
+
+        def showNewMenu():
+            self.showNewMenu()
+
+        def showSettingsMenu():
+            self.showSettingsMenu()
+
+        def showSortByMenu():
+            self.showSortByMenu()
+
+        def showGroupByMenu():
+            self.showGroupByMenu()
+
+        def showItemViewMenu():
+            self.showItemViewMenu()
+
+        def toggleView():
+            self.toggleView()
+
+        tip = 'Add a new item to the selected folder.'
+        icon = studioqt.icon('add')
+        self._newAction = self._menuBarWidget.addLeftAction('New Item')
+        self._newAction.setIcon(icon)
+        self._newAction.setToolTip(tip)
+        self._newAction.setStatusTip(tip)
+        self._newAction.triggered.connect(showNewMenu)
+        tip = 'Change the style of the item view.'
+        icon = studioqt.icon('settings2')
+        self._itemSettingsAction = self._menuBarWidget.addRightAction('Item View')
+        self._itemSettingsAction.setIcon(icon)
+        self._itemSettingsAction.setToolTip(tip)
+        self._itemSettingsAction.setStatusTip(tip)
+        self._itemSettingsAction.triggered.connect(showItemViewMenu)
+        tip = 'Group the items in the view by a column.'
+        icon = studioqt.icon('groupby')
+        self._groupbyAction = self._menuBarWidget.addRightAction('Group By')
+        self._groupbyAction.setIcon(icon)
+        self._groupbyAction.setToolTip(tip)
+        self._groupbyAction.setStatusTip(tip)
+        self._groupbyAction.triggered.connect(showGroupByMenu)
+        tip = 'Sort the items in the view by a column.'
+        icon = studioqt.icon('sortby')
+        self._sortbyAction = self._menuBarWidget.addRightAction('Sort By')
+        self._sortbyAction.setIcon(icon)
+        self._sortbyAction.setToolTip(tip)
+        self._sortbyAction.setStatusTip(tip)
+        self._sortbyAction.triggered.connect(showSortByMenu)
+        tip = 'Choose to show/hide both the preview and navigation pane.'
+        icon = studioqt.icon('view')
+        self._viewAction = self._menuBarWidget.addRightAction('View')
+        self._viewAction.setIcon(icon)
+        self._viewAction.setToolTip(tip)
+        self._viewAction.setStatusTip(tip)
+        self._viewAction.triggered.connect(toggleView)
+        icon = studioqt.icon('settings')
+        self._settingsAction = self._menuBarWidget.addRightAction('Settings')
+        self._settingsAction.setIcon(icon)
+        self._settingsAction.triggered.connect(showSettingsMenu)
+        self._updateButton = QtWidgets.QPushButton(None)
+        self._updateButton.setText('Update Available')
+        self._updateButton.setObjectName('updateButton')
+        self._updateButton.clicked.connect(self.help)
+        self._updateButton.hide()
+        self._menuBarWidget.layout().insertWidget(1, self._updateButton)
+        self._menuBarWidget.layout().insertWidget(1, self._searchWidget)
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 1, 0, 0)
+        self._previewFrame.setLayout(layout)
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 1, 0, 0)
+        self._foldersFrame.setLayout(layout)
+        self._foldersFrame.layout().addWidget(self._foldersWidget)
+        self._splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal, self)
+        self._splitter.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Expanding)
+        self._splitter.setHandleWidth(2)
+        self._splitter.setChildrenCollapsible(False)
+        self._splitter.insertWidget(0, self._foldersFrame)
+        self._splitter.insertWidget(1, self._itemsWidget)
+        self._splitter.insertWidget(2, self._previewFrame)
+        self._splitter.setStretchFactor(0, False)
+        self._splitter.setStretchFactor(1, True)
+        self._splitter.setStretchFactor(2, False)
+        self.layout().addWidget(self._menuBarWidget)
+        self.layout().addWidget(self._splitter)
+        self.layout().addWidget(self._statusWidget)
+        vbox = QtWidgets.QVBoxLayout()
+        self._previewFrame.setLayout(vbox)
+        self._previewFrame.layout().setSpacing(0)
+        self._previewFrame.layout().setContentsMargins(0, 0, 0, 0)
+        self._previewFrame.setMinimumWidth(5)
         self.dockingChanged.connect(self.updateWindowTitle)
+        searchWidget = self.searchWidget()
+        searchWidget.searchChanged.connect(self._searchChanged)
+        studiolibrary.Record.onSaved.connect(self._recordSaved)
+        studiolibrary.Record.onSaving.connect(self._recordSaving)
+        itemsWidget = self.itemsWidget()
+        itemsWidget.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        itemsWidget.itemMoved.connect(self._itemMoved)
+        itemsWidget.itemDropped.connect(self._itemDropped)
+        itemsWidget.itemSelectionChanged.connect(self._itemSelectionChanged)
+        itemsWidget.customContextMenuRequested.connect(self.showItemsContextMenu)
         folderWidget = self.foldersWidget()
-        folderWidget.onDropped.connect(self.onRecordDropped)
-        folderWidget.onSelectionChanged.connect(self.folderSelectionChanged)
-        folderWidget.onShowContextMenu.connect(self.onShowFolderContextMenu)
-        recordsWidget = self.recordsWidget()
-        recordsWidget.itemDropped.connect(self.onRecordDropped)
-        recordsWidget.itemOrderChanged.connect(self.onRecordOrderChanged)
-        recordsWidget.onShowContextMenu.connect(self.onShowRecordContextMenu)
-        recordsWidget.onSelectionChanged.connect(self.onRecordSelectionChanged)
-        studiolibrary.Record.onSaved.connect(self.onRecordSaved)
-        studiolibrary.SettingsDialog.onColorChanged.connect(self.onSettingsColorChanged)
-        studiolibrary.SettingsDialog.onBackgroundColorChanged.connect(self.onSettingsBackgroundColorChanged)
+        folderWidget.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        folderWidget.itemDropped.connect(self._folderDropped)
+        folderWidget.itemSelectionChanged.connect(self._folderSelectionChanged)
+        folderWidget.customContextMenuRequested.connect(self.showFolderContextMenu)
         self.checkForUpdates()
         self.setLibrary(library)
+        self._compactView = False
+        self.updateViewButton()
+        validGroupByColumns = ['Category', 'Modified', 'Type']
+        self.recordsWidget().treeWidget().setValidGroupByColumns(validGroupByColumns)
 
-    def iconColor(self):
-        """
-        :rtype: studioqt.Color
-        """
-        return studioqt.Color(245, 245, 245)
+    def createItemsWidget(self):
+        itemsWidget = studioqt.CombinedWidget(self)
+        return itemsWidget
 
-    def newMenu(self):
-        """
-        Return the new menu for adding new folders and records.
-        
-        :rtype: QtGui.QMenu
-        """
-        color = self.iconColor()
-        icon = studiolibrary.resource().icon('add', color=color)
-        menu = QtGui.QMenu(self)
-        menu.setIcon(icon)
-        menu.setTitle('New')
-        icon = studiolibrary.resource().icon('folder', color=color)
-        action = QtGui.QAction(icon, 'Folder', menu)
-        action.triggered.connect(self.showCreateFolderDialog)
-        menu.addAction(action)
-        icon = studiolibrary.resource().icon('add_library', color=color)
-        action = QtGui.QAction(icon, 'Library', menu)
-        action.triggered.connect(self.showNewLibraryDialog)
-        menu.addAction(action)
-        separator = QtGui.QAction('', menu)
-        separator.setSeparator(True)
-        menu.addAction(separator)
-        for name in self.library().plugins():
-            plugin = self.plugin(name)
-            action = plugin.newAction(parent=menu)
-            if action:
-                callback = partial(self.showCreateWidget, plugin=plugin)
-                action.triggered.connect(callback)
-                menu.addAction(action)
-
-        return menu
-
-    def recordEditMenu(self):
-        """
-        Return the edit menu for deleting, renaming records.
-        
-        :rtype: QtGui.QMenu
-        """
-        menu = QtGui.QMenu(self)
-        menu.setTitle('Edit')
-        action = QtGui.QAction('Delete', menu)
-        action.triggered.connect(self.deleteSelectedRecords)
-        menu.addAction(action)
-        action = QtGui.QAction('Rename', menu)
-        action.triggered.connect(self.renameSelectedRecord)
-        menu.addAction(action)
-        action = QtGui.QAction('Show in folder', menu)
-        action.triggered.connect(self.openSelectedRecords)
-        menu.addAction(action)
-        return menu
-
-    def folderEditMenu(self):
-        """
-        Return the edit menu for deleting, renaming folders.
-        
-        :rtype: QtGui.QMenu
-        """
-        menu = QtGui.QMenu(self)
-        menu.setTitle('Edit')
-        action = QtGui.QAction('Delete', menu)
-        action.triggered.connect(self.deleteSelectedFolders)
-        menu.addAction(action)
-        action = QtGui.QAction('Rename', menu)
-        action.triggered.connect(self.renameSelectedFolder)
-        menu.addAction(action)
-        action = QtGui.QAction('Show in folder', menu)
-        action.triggered.connect(self.openSelectedFolders)
-        menu.addAction(action)
-        return menu
-
-    def settingsMenu(self):
-        """
-        Return the settings menu for changing the library widget.
-        
-        :rtype: QtGui.QMenu
-        """
-        icon = studioqt.icon('settings', color=self.iconColor())
-        menu = QtGui.QMenu('', self)
-        menu.setTitle('Settings')
-        menu.setIcon(icon)
-        libraries = studiolibrary.LibrariesMenu(menu)
-        menu.addMenu(libraries)
-        menu.addSeparator()
-        action = QtGui.QAction('Settings', menu)
-        action.triggered[bool].connect(self.showSettingsDialog)
-        menu.addAction(action)
-        separator = QtGui.QAction('', menu)
-        separator.setSeparator(True)
-        menu.addAction(separator)
-        action = QtGui.QAction('Show menu', menu)
-        action.setCheckable(True)
-        action.setChecked(self.isMenuBarWidgetVisible())
-        action.triggered[bool].connect(self.setMenuBarWidgetVisible)
-        menu.addAction(action)
-        action = QtGui.QAction('Show folders', menu)
-        action.setCheckable(True)
-        action.setChecked(self.isFoldersWidgetVisible())
-        action.triggered[bool].connect(self.setFoldersWidgetVisible)
-        menu.addAction(action)
-        action = QtGui.QAction('Show preview', menu)
-        action.setCheckable(True)
-        action.setChecked(self.isPreviewWidgetVisible())
-        action.triggered[bool].connect(self.setPreviewWidgetVisible)
-        menu.addAction(action)
-        action = QtGui.QAction('Show status', menu)
-        action.setCheckable(True)
-        action.setChecked(self.isStatusBarWidgetVisible())
-        action.triggered[bool].connect(self.setStatusBarWidgetVisible)
-        menu.addAction(action)
-        menu.addSeparator()
-        viewMenu = self.recordsWidget().settingsMenu(parent=menu)
-        menu.addMenu(viewMenu)
-        if studiolibrary.isMaya():
-            menu.addSeparator()
-            dockMenu = self.dockMenu()
-            menu.addMenu(dockMenu)
-        menu.addSeparator()
-        action = QtGui.QAction('Debug mode', menu)
-        action.setCheckable(True)
-        action.setChecked(self.isDebug())
-        action.triggered[bool].connect(self.setDebugMode)
-        menu.addAction(action)
-        action = QtGui.QAction('Help', menu)
-        action.triggered.connect(self.help)
-        menu.addAction(action)
-        return menu
-
-    def showNewMenu(self):
-        """
-        :rtype: QtGui.QAction
-        """
-        if not self.isLocked():
-            menu = self.newMenu()
-            point = self.ui.createButton.rect().bottomLeft()
-            point = self.ui.createButton.mapToGlobal(point)
-            return menu.exec_(point)
-
-    def showSettingsMenu(self):
-        """
-        :rtype: QtGui.QAction
-        """
-        menu = self.settingsMenu()
-        point = self.ui.settingsButton.rect().bottomRight()
-        point = self.ui.settingsButton.mapToGlobal(point)
-        menu.show()
-        x = point.x() - menu.width()
-        point.setX(x)
-        return menu.exec_(point)
-
-    def onShowFolderContextMenu(self, menu):
-        """
-        :type menu: QtGui.QMenu
-        :rtype: None
-        """
-        folders = self.selectedFolders()
-        if self.isLocked():
-            return
-        menu.addMenu(self.newMenu())
-        if len(folders) == 1:
-            menu.addMenu(self.folderEditMenu())
-        if not folders:
-            menu.addSeparator()
-            menu.addMenu(self.settingsMenu())
-
-    def onShowRecordContextMenu(self):
-        """
-        :rtype: None
-        """
-        records = self.recordsWidget().selectedItems()
-        self.showRecordContextMenu(records=records)
-
-    def showRecordContextMenu(self, records):
-        """
-        :type records: list[studiolibrary.Record]
-        :rtype QtGui.QAction
-        """
-        menu = self.recordContextMenu(records)
-        point = QtGui.QCursor.pos()
-        point.setX(point.x() + 3)
-        point.setY(point.y() + 3)
-        action = menu.exec_(point)
-        menu.close()
-        return action
-
-    def recordContextMenu(self, records):
-        """
-        :type records: list[studiolibrary.Record]
-        :rtype: studiolibrary.ContextMenu
-        """
-        menu = studiolibrary.ContextMenu(self)
-        for plugin in self.plugins().values():
-            plugin.recordContextMenu(menu, records)
-
-        if not self.isLocked():
-            menu.addMenu(self.newMenu())
-            menu.addMenu(self.recordEditMenu())
-        menu.addSeparator()
-        menu.addMenu(self.settingsMenu())
-        return menu
-
-    def folderSelectionChanged(self, selectedFolders, deselectedFolders):
-        """
-        :type selectedFolders: list[studiolibrary.Folder]
-        :type deselectedFolders: list[studiolibrary.Folder]
-        :rtype: None
-        """
-        for plugin in self.plugins().values():
-            plugin.folderSelectionChanged(selectedFolders, deselectedFolders)
-
-        self.reloadRecords()
-
-    def onRecordOrderChanged(self):
-        """
-        :rtype: None
-        """
-        folders = self.selectedFolders()
-        if len(folders) == 1:
-            folder, = folders
-            order = []
-            for item in self.recordsWidget().items():
-                order.append(item.text())
-
-            folder.setOrder(order)
-
-    def recordsFromUrls(self, urls):
-        """
-        :type urls: list[QtGui.QUrl]
-        :rtype: list[studiolibrary.Records]
-        """
-        records = []
-        for url in urls:
-            path = url.path()
-            record = self.library().recordFromPath(path)
-            records.append(record)
-
-        return records
-
-    def onRecordDropped(self, event):
-        """
-        :type event: list[studiolibrary.Record]
-        :rtype: None
-        """
-        mimeData = event.mimeData()
-        if mimeData.hasUrls():
-            folder = self.selectedFolder()
-            row = self.recordsWidget().rowAt(event.pos())
-            records = self.recordsFromUrls(mimeData.urls())
-        self.moveRecordsToFolder(records, folder, row=row)
-
-    def moveRecordsToFolder(self, records, folder, row = -1):
-        """
-        :type records: list[studiolibrary.Record]
-        :type folder: studiolibrary.Folder
-        :rtype: None
-        """
-        movedRecords = []
-        try:
-            for record in records:
-                item = self.recordsWidget().itemFromUrl(record.url())
-                if not item:
-                    path = folder.path() + '/' + record.name()
-                    record.rename(path)
-                    movedRecords.append(record)
-
-        except Exception as msg:
-            self.setError(msg)
-            raise
-        finally:
-            if movedRecords:
-                self.recordsWidget().moveItems(row, movedRecords)
-            self.selectRecords(movedRecords)
-
-    def onRecordSelectionChanged(self):
-        """
-        """
-        record = self.recordsWidget().selectedItem()
-        self.setPreviewWidgetFromRecord(record)
-
-    def onRecordSaved(self, record):
-        """
-        :type record: studiolibrary.Record
-        :rtype: None
-        """
-        folder = self.selectedFolder()
-        if folder and folder.path() == record.dirname():
-            path = record.path()
-            self.reloadRecords()
-            self.selectRecordsFromPaths([path])
-
-    def onSettingsColorChanged(self, settingsWindow):
-        """
-        :type settingsWindow: studiolibrary.SettingsWindow
-        :rtype: None
-        """
-        if self.library() == settingsWindow.library():
-            self.library().setAccentColor(settingsWindow.color())
-            self.reloadStyleSheet()
-
-    def onSettingsBackgroundColorChanged(self, settingsWindow):
-        """
-        :type settingsWindow: studiolibrary.SettingsWindow
-        :rtype: None
-        """
-        if self.library() == settingsWindow.library():
-            self.library().setBackgroundColor(settingsWindow.backgroundColor())
-            self.reloadStyleSheet()
-
-    def showNewLibraryDialog(self):
-        """
-        :rtype: None
-        """
-        studiolibrary.Library.showNewLibraryDialog()
-
-    def recordsWidget(self):
-        """
-        :rtype: studiolibrary.RecordsWidget
-        """
-        return self.ui.recordsWidget
+    def createFoldersWidget(self):
+        folderWidget = studioqt.FoldersWidget(self)
+        return folderWidget
 
     def foldersWidget(self):
         """
         :rtype: studiolibrary.FoldersWidget
         """
-        return self.ui.foldersWidget
+        return self._foldersWidget
 
-    def previewWidget(self):
-        """
-        :rtype: studiolibrary.QWidget
-        """
-        return self.ui.previewWidget
+    def isCompactView(self):
+        return not self.isFoldersWidgetVisible() and not self.isPreviewWidgetVisible()
 
-    def isListView(self):
+    def toggleView(self):
         """
-        :type: bool
+        Toggle the preview widget and folder widget visible.
+        :rtype: None
         """
-        return self.ui.recordsWidget.viewMode() == QtGui.QListView.ListMode
+        compact = self.isCompactView()
+        self.setPreviewWidgetVisible(compact)
+        self.setFoldersWidgetVisible(compact)
 
-    def isIconView(self):
+    def updateViewButton(self):
         """
-        :type: bool
+        Update/referesh the icon on the view button.
+        
+        :rtype: None
         """
-        return self.ui.recordsWidget.viewMode() == QtGui.QListView.IconMode
+        compact = self.isCompactView()
+        if not compact:
+            icon = studioqt.icon('view_all')
+        else:
+            icon = studioqt.icon('view_compact')
+        self._viewAction.setIcon(icon)
+        self.menuBarWidget().update()
+
+    def showGroupByMenu(self):
+        """
+        Show the group by menu at the group button.
+        
+        :rtype: None
+        """
+        menu = self.recordsWidget().createGroupByMenu()
+        widget = self.menuBarWidget().findToolButton('Group By')
+        point = widget.mapToGlobal(QtCore.QPoint(0, widget.height()))
+        action = menu.exec_(point)
+
+    def showSortByMenu(self):
+        """
+        Show the sort by menu at the sort button.
+        
+        :rtype: None
+        """
+        menu = self.recordsWidget().createSortByMenu()
+        widget = self.menuBarWidget().findToolButton('Sort By')
+        point = widget.mapToGlobal(QtCore.QPoint(0, widget.height()))
+        action = menu.exec_(point)
+
+    def showItemViewMenu(self):
+        """
+        Show the item settings menu.
+        
+        :rtype: None
+        """
+        menu = self.recordsWidget().createItemSettingsMenu()
+        widget = self.menuBarWidget().findToolButton('Item View')
+        point = widget.mapToGlobal(QtCore.QPoint(0, widget.height()))
+        action = menu.exec_(point)
+
+    def statusWidget(self):
+        """
+        :rtype: StatusWidget
+        """
+        return self._statusWidget
+
+    def searchWidget(self):
+        """
+        :rtype: SearchWidget
+        """
+        return self._searchWidget
+
+    def recordsWidget(self):
+        """
+        :rtype: studioqt.CombinedWidget
+        """
+        return self._itemsWidget
+
+    def menuBarWidget(self):
+        """
+        :rtype: MenuBarWidget
+        """
+        return self._menuBarWidget
+
+    def items(self):
+        """
+        Return all the loaded items.
+        
+        :rtype: list[studiolibrary.LibraryItem]
+        """
+        return self.itemsWidget().items()
+
+    def itemsWidget(self):
+        """
+        Return the widget the contains all the items.
+        
+        :rtype: studioqt.CombinedWidget
+        """
+        return self._itemsWidget
+
+    def refresh(self):
+        """
+        Refresh/Reload the records.
+        
+        :rtype: None
+        """
+        self.loadRecords()
+
+    def refreshAll(self):
+        """
+        Refresh all library widgets.
+        
+        :rtype: None
+        """
+        for library in self.library().libraries():
+            widget = library.libraryWidget()
+            if widget:
+                widget.refresh()
+
+    def path(self):
+        """
+        Return the library root path.
+        
+        :rtype: str
+        """
+        return self.library().path()
+
+    def library(self):
+        """
+        :rtype: studiolibrary.Library
+        """
+        return self._library
+
+    def setLibrary(self, library):
+        """
+        :type library: studiolibrary.Library
+        """
+        self._library = library
+        self.reloadLibrary()
+
+    def setLoaderEnabled(self, value):
+        """
+        :type value: bool
+        :rtype: None
+        """
+        self._loaderEnabled = value
+
+    def loaderEnabled(self):
+        """
+        :rtype: func
+        """
+        return self._loaderEnabled
+
+    def loader(self):
+        """
+        :rtype: list[studiolibrary.Record]
+        """
+        records = []
+        folders = self.foldersWidget().selectedFolders()
+        for folder in folders:
+            path = folder.path()
+            depth = 1
+            if self.isRecursiveSearchEnabled():
+                depth = 3
+            records.extend(self.library().loadRecords(path, depth=depth))
+
+        return records
+
+    @studioqt.showWaitCursor
+    def loadRecords(self):
+        """
+        :rtype: None
+        """
+        if not self.loaderEnabled():
+            logger.debug('Loader disabled!')
+            return
+        logger.debug("Loading records for library '%s'" % self.library().name())
+        elapsedTime = time.time()
+        selectedRecords = self.selectedRecords()
+        records = self.loader()
+        self.itemsWidget().setItems(records, sortEnabled=False)
+        self.loadCustomOrder()
+        self.itemsWidget().refreshSortBy()
+        if selectedRecords:
+            self.selectRecords(selectedRecords)
+        self.refreshSearch()
+        elapsedTime = time.time() - elapsedTime
+        self.setLoadedMessage(elapsedTime)
+        logger.debug('Loaded records')
+
+    def reloadLibrary(self):
+        """
+        :rtype: None
+        """
+        self.clearRecords()
+        self.clearPreviewWidget()
+        self.loadPlugins()
+        self.updateWindowTitle()
+        self.setRootPath(self.library().path())
+
+    def reloadFolders(self):
+        """
+        :rtype: None
+        """
+        ignoreFilter = self.folderIgnoreFilter()
+        self.foldersWidget().reload()
+        self.foldersWidget().setIgnoreFilter(ignoreFilter)
 
     def checkForUpdates(self):
         """
@@ -465,51 +419,519 @@ class LibraryWidget(studiolibrary.MayaDockWidgetMixin, QtGui.QWidget):
         else:
             logger.debug('Check for updates has been disabled!')
 
-    def setLibrary(self, library):
+    def _itemSelectionChanged(self):
         """
-        :type library: studiolibrary.Library
+        Triggered when an item is selected or deselected.
+        
+        :rtype: None
         """
-        self._library = library
-        self.reloadLibrary()
+        record = self.recordsWidget().selectedItem()
+        self.setPreviewWidgetFromRecord(record)
 
-    def reloadLibrary(self):
+    def _folderSelectionChanged(self):
+        """
+        Triggered when an item is selected or deselected.
+        
+        :type selectedFolders: list[studiolibrary.Folder]
+        :type deselectedFolders: list[studiolibrary.Folder]
+        :rtype: None
+        """
+        for plugin in self.plugins().values():
+            plugin.folderSelectionChanged()
+
+        self.loadRecords()
+        folderPath = self.selectedFolderPath()
+        self.folderPathSelected.emit(folderPath)
+
+    def recordsFromUrls(self, urls):
+        """
+        :type urls: list[QtGui.QUrl]
+        :rtype: list[studiolibrary.Records]
+        """
+        records = []
+        for url in urls:
+            path = url.toLocalFile()
+            if studiolibrary.isWindows():
+                if path.startswith('/'):
+                    path = path[1:]
+            record = self.library().recordFromPath(path)
+            records.append(record)
+
+        return records
+
+    def createNewMenu(self):
+        """
+        Return the new menu for adding new folders and records.
+        
+        :rtype: QtWidgets.QMenu
+        """
+        color = self.iconColor()
+        icon = studiolibrary.resource().icon('add', color=color)
+        menu = QtWidgets.QMenu(self)
+        menu.setIcon(icon)
+        menu.setTitle('New')
+        icon = studiolibrary.resource().icon('folder', color=color)
+        action = QtWidgets.QAction(icon, 'Folder', menu)
+        action.triggered.connect(self.showCreateFolderDialog)
+        menu.addAction(action)
+        icon = studiolibrary.resource().icon('add_library', color=color)
+        action = QtWidgets.QAction(icon, 'Library', menu)
+        action.triggered.connect(self.showNewLibraryDialog)
+        menu.addAction(action)
+        separator = QtWidgets.QAction('', menu)
+        separator.setSeparator(True)
+        menu.addAction(separator)
+        for name in self.library().plugins():
+            plugin = self.plugin(name)
+            action = plugin.newAction(parent=menu)
+            if action:
+                callback = partial(self.showCreateWidget, plugin=plugin)
+                action.triggered.connect(callback)
+                menu.addAction(action)
+
+        return menu
+
+    def createRecordEditMenu(self):
+        """
+        Return the edit menu for deleting, renaming records.
+        
+        :rtype: QtWidgets.QMenu
+        """
+        menu = QtWidgets.QMenu(self)
+        menu.setTitle('Edit')
+        action = QtWidgets.QAction('Rename', menu)
+        action.triggered.connect(self.renameSelectedRecord)
+        menu.addAction(action)
+        if self.trashEnabled():
+            action = QtWidgets.QAction('Move to trash', menu)
+            action.setEnabled(self.isTrashEnabled())
+            action.triggered.connect(self.trashSelectedRecordsDialog)
+            menu.addAction(action)
+        action = QtWidgets.QAction('Show in folder', menu)
+        action.triggered.connect(self.openSelectedRecords)
+        menu.addAction(action)
+        return menu
+
+    def createSettingsMenu(self):
+        """
+        Return the settings menu for changing the library widget.
+        
+        :rtype: QtWidgets.QMenu
+        """
+        icon = studioqt.icon('settings', color=self.iconColor())
+        menu = QtWidgets.QMenu('', self)
+        menu.setTitle('Settings')
+        menu.setIcon(icon)
+        librariesMenu = studiolibrary.LibrariesMenu(menu)
+        menu.addMenu(librariesMenu)
+        menu.addSeparator()
+        if self.DPI_ENABLED:
+            action = studioqt.SliderAction('Dpi', menu)
+            dpi = self.dpi() * 100.0
+            action.slider().setRange(self.MIN_SLIDER_DPI, self.MAX_SLIDER_DPI)
+            action.slider().setValue(dpi)
+            action.valueChanged.connect(self._dpiSliderChanged)
+            menu.addAction(action)
+        action = QtWidgets.QAction('Settings', menu)
+        action.triggered[bool].connect(self.showSettingsDialog)
+        menu.addAction(action)
+        separator = QtWidgets.QAction('', menu)
+        separator.setSeparator(True)
+        menu.addAction(separator)
+        action = QtWidgets.QAction('Show menu', menu)
+        action.setCheckable(True)
+        action.setChecked(self.isMenuBarWidgetVisible())
+        action.triggered[bool].connect(self.setMenuBarWidgetVisible)
+        menu.addAction(action)
+        action = QtWidgets.QAction('Show folders', menu)
+        action.setCheckable(True)
+        action.setChecked(self.isFoldersWidgetVisible())
+        action.triggered[bool].connect(self.setFoldersWidgetVisible)
+        menu.addAction(action)
+        action = QtWidgets.QAction('Show preview', menu)
+        action.setCheckable(True)
+        action.setChecked(self.isPreviewWidgetVisible())
+        action.triggered[bool].connect(self.setPreviewWidgetVisible)
+        menu.addAction(action)
+        action = QtWidgets.QAction('Show status', menu)
+        action.setCheckable(True)
+        action.setChecked(self.isStatusBarWidgetVisible())
+        action.triggered[bool].connect(self.setStatusBarWidgetVisible)
+        menu.addAction(action)
+        if self.trashEnabled():
+            menu.addSeparator()
+            action = QtWidgets.QAction('Show Trash Folder', menu)
+            action.setEnabled(self.trashFolderExists())
+            action.setCheckable(True)
+            action.setChecked(self.isTrashFolderVisible())
+            action.triggered[bool].connect(self.setTrashFolderVisible)
+            menu.addAction(action)
+        menu.addSeparator()
+        action = QtWidgets.QAction('Enable Recursive Search', menu)
+        action.setCheckable(True)
+        action.setChecked(self.isRecursiveSearchEnabled())
+        action.triggered[bool].connect(self.setRecursiveSearchEnabled)
+        menu.addAction(action)
+        menu.addSeparator()
+        viewMenu = self.recordsWidget().createSettingsMenu()
+        menu.addMenu(viewMenu)
+        menu.addSeparator()
+        if studiolibrary.isMaya():
+            menu.addSeparator()
+            dockMenu = self.dockMenu()
+            menu.addMenu(dockMenu)
+        menu.addSeparator()
+        action = QtWidgets.QAction('Debug mode', menu)
+        action.setCheckable(True)
+        action.setChecked(self.isDebug())
+        action.triggered[bool].connect(self.setDebugMode)
+        menu.addAction(action)
+        action = QtWidgets.QAction('Help', menu)
+        action.triggered.connect(self.help)
+        menu.addAction(action)
+        return menu
+
+    def showNewMenu(self):
+        """
+        Creates and shows the new menu at the new action button.
+        
+        :rtype: QtWidgets.QAction
+        """
+        menu = self.createNewMenu()
+        point = self.menuBarWidget().rect().bottomLeft()
+        point = self.menuBarWidget().mapToGlobal(point)
+        menu.show()
+        return menu.exec_(point)
+
+    def showSettingsMenu(self):
+        """
+        :rtype: QtWidgets.QAction
+        """
+        menu = self.createSettingsMenu()
+        point = self.menuBarWidget().rect().bottomRight()
+        point = self.menuBarWidget().mapToGlobal(point)
+        menu.show()
+        x = point.x() - menu.width()
+        point.setX(x)
+        return menu.exec_(point)
+
+    def showFolderContextMenu(self, pos = None):
+        """
+        :type menu: QtWidgets.QMenu
+        :rtype: None
+        """
+        menu = self.createFolderContextMenu()
+        point = QtGui.QCursor.pos()
+        point.setX(point.x() + 3)
+        point.setY(point.y() + 3)
+        action = menu.exec_(point)
+        menu.close()
+        return action
+
+    def createFolderContextMenu(self):
+        menu = QtWidgets.QMenu(self)
+        if self.isLocked():
+            action = menu.addAction('Locked')
+            action.setEnabled(False)
+        else:
+            menu.addMenu(self.createNewMenu())
+            folders = self.selectedFolders()
+            if folders:
+                m = self.foldersWidget().createEditMenu(menu)
+                menu.addMenu(m)
+            menu.addSeparator()
+            menu.addMenu(self.createSettingsMenu())
+        return menu
+
+    def showItemsContextMenu(self, pos = None):
+        """
+        :type pos: QtGui.QPoint
+        :rtype QtWidgets.QAction
+        """
+        items = self.itemsWidget().selectedItems()
+        menu = self.createItemContextMenu(items)
+        point = QtGui.QCursor.pos()
+        point.setX(point.x() + 3)
+        point.setY(point.y() + 3)
+        action = menu.exec_(point)
+        menu.close()
+        return action
+
+    def createItemContextMenu(self, items):
+        """
+        :type items: list[studiolibrary.LibraryItem]
+        :rtype: studiolibrary.ContextMenu
+        """
+        menu = studioqt.ContextMenu(self)
+        for plugin in self.plugins().values():
+            try:
+                plugin.recordContextMenu(menu, items)
+            except Exception as msg:
+                logger.exception(msg)
+
+        if not self.isLocked():
+            menu.addMenu(self.createNewMenu())
+            if items:
+                menu.addMenu(self.createRecordEditMenu())
+        menu.addSeparator()
+        menu.addMenu(self.itemsWidget().createSettingsMenu())
+        menu.addSeparator()
+        menu.addMenu(self.createSettingsMenu())
+        return menu
+
+    def folderDataPath(self):
+        """
+        Return the disc location of the folder data.
+        
+        :rtype: str
+        """
+        return self.library().folderDataPath()
+
+    def writeFolderData(self, data):
+        """
+        Save the item data to disc.
+        
+        :type data: dict
+        :rtype: None
+        """
+        path = self.folderDataPath()
+        _data = self.readFolderData()
+        _data.update(data)
+        return studiolibrary.saveJson(path, data)
+
+    def readFolderData(self):
+        """
+        Read the item data from disc.
+        
+        :rtype: dict
+        """
+        path = self.folderDataPath()
+        return studiolibrary.readJson(path)
+
+    def loadFolderData(self):
+        """
+        Load and set the custom sort order from disc.
+        
+        :rtype: None
+        """
+        data = self.readFolderData()
+        try:
+            self.foldersWidget().setFolderSettings(data)
+        except Exception as msg:
+            logger.exception(msg)
+
+    def saveFolderData(self):
+        """
+        Save the custom sort order to disc.
+        
+        :rtype: None
+        """
+        data = self.foldersWidget().folderSettings()
+        self.writeFolderData(data)
+
+    def itemDataPath(self):
+        """
+        Return the disc location of the item data.
+        
+        :rtype: str
+        """
+        path = self.library().itemDataPath()
+        return path
+
+    def writeItemData(self, data):
+        """
+        Save the item data to disc.
+        
+        :type data: dict
+        :rtype: None
+        """
+        path = self.itemDataPath()
+        _data = self.readItemData()
+        _data.update(data)
+        return studiolibrary.saveJson(path, data)
+
+    def readItemData(self):
+        """
+        Read the item data from disc.
+        
+        :rtype: dict
+        """
+        path = self.itemDataPath()
+        return studiolibrary.readJson(path)
+
+    def loadCustomOrder(self):
+        """
+        Load and set the custom sort order from disc.
+        
+        :rtype: None
+        """
+        data = self.readItemData()
+        try:
+            self.itemsWidget().setCustomSortOrder(data)
+        except Exception as msg:
+            logger.exception(msg)
+
+    def saveCustomOrder(self):
+        """
+        Save the custom sort order to disc.
+        
+        :rtype: None
+        """
+        data = self.itemsWidget().customSortOrder()
+        self.writeItemData(data)
+
+    def _itemMoved(self, item):
         """
         :rtype: None
         """
-        self.clearRecords()
-        self.clearPreviewWidget()
-        self.loadPlugins()
-        self.setRootPath(self.library().path())
-        self.updateWindowTitle()
+        self.saveCustomOrder()
+
+    def _itemDropped(self, event):
+        """
+        :rtype: None
+        """
+        pass
+
+    def _folderDropped(self, event):
+        """
+        :type event: list[studiolibrary.Record]
+        :rtype: None
+        """
+        mimeData = event.mimeData()
+        if mimeData.hasUrls():
+            folder = self.selectedFolder()
+            records = self.recordsFromUrls(mimeData.urls())
+            for record in records:
+                if folder.path() != record.dirname():
+                    self.moveRecordsToFolder(records, folder=folder)
+                    self.refreshAll()
+                    break
+
+    def moveRecordsDialog(self, parent = None):
+        """
+        :type parent: QtWidgets.QWidget
+        :rtype: QtWidgets.QMessageBox
+        """
+        parent = parent or self
+        msgBox = QtWidgets.QMessageBox(parent)
+        msgBox.setWindowTitle('Move or Copy records?')
+        msgBox.setText('Would you like to copy or move the selected record/s?')
+        msgBox.addButton('Copy', QtWidgets.QMessageBox.AcceptRole)
+        msgBox.addButton('Move', QtWidgets.QMessageBox.AcceptRole)
+        msgBox.addButton('Cancel', QtWidgets.QMessageBox.RejectRole)
+        return msgBox
+
+    def moveRecordsToFolder(self, records, folder):
+        """
+        :type records: list[studiolibrary.Record]
+        :type folder: studiolibrary.Folder
+        :rtype: None
+        """
+        Copy = 0
+        Move = 1
+        Cancel = 2
+        movedRecords = []
+        dialog = self.moveRecordsDialog()
+        action = dialog.exec_()
+        dialog.close()
+        if action == Cancel:
+            return
+        self.recordsWidget().clearSelection()
+        try:
+            for record in records:
+                path = folder.path() + '/' + record.name()
+                if action == Copy:
+                    record.copy(path)
+                elif action == Move:
+                    record.rename(path)
+                movedRecords.append(record)
+
+        except Exception as msg:
+            logger.exception(msg)
+            self.criticalDialog(msg)
+        finally:
+            self.recordsWidget().addItems(movedRecords)
+            self.selectRecords(movedRecords)
+
+    def _recordSaved(self, record):
+        """
+        :type record: studiolibrary.Record
+        :rtype: None
+        """
+        folder = self.selectedFolder()
+        if folder and folder.path() == record.dirname():
+            path = record.path()
+            self.recordsWidget().clearSelection()
+            self.loadRecords()
+            self.selectPaths([path])
+
+    def _recordSaving(self, record):
+        """
+        :type record: studiolibrary.Record
+        :rtype: None
+        """
+        if self.library().path() in record.path():
+            if record.exists():
+                self.showRecordExistsDialog(record)
+
+    def showRecordExistsDialog(self, record):
+        """
+        :type record: studiolibrary.Record
+        :rtype: None
+        """
+        path = record.path()
+        records = [record]
+        title = 'Warning'
+        message = 'Record already exists! Would you like to move the existing record "{name}" to the trash?'
+        message = message.format(name=record.name())
+        result = self.trashRecordsDialog(records, title=title, message=message)
+        if result != QtWidgets.QMessageBox.Yes:
+            record.setErrorString('Record was not saved! You cannot save over an existsing record.')
+        record.setPath(path)
+
+    def showNewLibraryDialog(self):
+        """
+        :rtype: None
+        """
+        studiolibrary.Library.showNewLibraryDialog()
+
+    def folderIgnoreFilter(self):
+        """
+        Return a list of folder names that should be hidden/ignored.
+        
+        :rtype: list[str]
+        """
+        ignoreFilter = ['.', '.studiolibrary', '.mayaswatches']
+        if not self.isTrashFolderVisible():
+            ignoreFilter.append('trash')
+        for name, plugin in self.plugins().items():
+            ignoreFilter.append(plugin.extension())
+
+        return ignoreFilter
 
     def setRootPath(self, path):
         """
         :type path: str
         :rtype: None
         """
-        invalid = ['.', '.studiolibrary']
-        for name, plugin in self.plugins().items():
-            invalid.append(plugin.extension())
-
-        self.ui.foldersWidget.clearSelection()
-        self.ui.foldersWidget.setRootPath(path, invalid=invalid)
-
-    def library(self):
-        """
-        :rtype: studiolibrary.Library
-        """
-        return self._library
+        trashPath = self.trashPath()
+        folderWidget = self.foldersWidget()
+        ignoreFilter = self.folderIgnoreFilter()
+        folderWidget.clearSelection()
+        folderWidget.setRootPath(path)
+        folderWidget.setIgnoreFilter(ignoreFilter)
+        folderWidget.setFolderOrderIndex(trashPath, 0)
 
     def showSettingsDialog(self):
         """
         """
         library = self.library()
         name = library.name()
-        location = library.path()
+        path = library.path()
         result = library.execSettingsDialog()
-        if result == QtGui.QDialog.Accepted:
+        if result == QtWidgets.QDialog.Accepted:
             self.saveSettings()
-            if location != library.path():
+            if path != library.path():
                 self.reloadLibrary()
             if name != library.name():
                 self.updateWindowTitle()
@@ -519,69 +941,147 @@ class LibraryWidget(studiolibrary.MayaDockWidgetMixin, QtGui.QWidget):
         """
         :rtype: bool
         """
-        return self._isPreviewWidgetVisible
+        return self._previewWidgetVisible
 
     def isFoldersWidgetVisible(self):
         """
         :rtype: bool
         """
-        return self._isFoldersWidgetVisible
+        return self._foldersWidgetVisible
 
     def isStatusBarWidgetVisible(self):
         """
         :rtype: bool
         """
-        return self._isStatusBarWidgetVisible
+        return self._statusBarWidgetVisible
 
     def isMenuBarWidgetVisible(self):
         """
         :rtype: bool
         """
-        return self._isMenuBarWidgetVisible
+        return self.menuBarWidget().isExpanded()
 
     def setPreviewWidgetVisible(self, value):
         """
         :type value: bool
         """
         value = bool(value)
-        self._isPreviewWidgetVisible = value
+        self._previewWidgetVisible = value
         if value:
-            self.ui.previewFrame.show()
+            self._previewFrame.show()
         else:
-            self.ui.previewFrame.hide()
+            self._previewFrame.hide()
+        self.updateViewButton()
 
     def setFoldersWidgetVisible(self, value):
         """
         :type value: bool
         """
         value = bool(value)
-        self._isFoldersWidgetVisible = value
+        self._foldersWidgetVisible = value
         if value:
-            self.ui.foldersWidget.show()
+            self._foldersFrame.show()
         else:
-            self.ui.foldersWidget.hide()
+            self._foldersFrame.hide()
+        self.updateViewButton()
 
     def setMenuBarWidgetVisible(self, value):
         """
         :type value: bool
         """
         value = bool(value)
-        self._isMenuBarWidgetVisible = value
         if value:
-            self.ui.menuFrame.show()
+            self.menuBarWidget().expand()
         else:
-            self.ui.menuFrame.hide()
+            self.menuBarWidget().collapse()
 
     def setStatusBarWidgetVisible(self, value):
         """
         :type value: bool
         """
         value = bool(value)
-        self._isStatusBarWidgetVisible = value
+        self._statusBarWidgetVisible = value
         if value:
-            self.ui.statusWidget.show()
+            self.statusWidget().show()
         else:
-            self.ui.statusWidget.hide()
+            self.statusWidget().hide()
+
+    def filterItems(self, items):
+        """
+        Filter the given items using the search filter.
+        
+        :rtype: list[studiolibrary.LibraryItem]
+        """
+        searchFilter = self.searchWidget().searchFilter()
+        column = self.itemsWidget().treeWidget().columnFromLabel('Search Order')
+        for item in items:
+            if searchFilter.match(item.searchText()):
+                item.setText(column, str(searchFilter.matches()))
+                yield item
+
+        if self.itemsWidget().sortColumn() == column:
+            self.itemsWidget().refreshSortBy()
+
+    def setSearchText(self, text):
+        """
+        Set the search widget text..
+        
+        :type text: str
+        :rtype: None
+        """
+        self.searchWidget().setText(text)
+
+    def refreshSearch(self):
+        """
+        Refresh the search results.
+        
+        :rtype: None
+        """
+        self._searchChanged()
+
+    def itemsHiddenCount(self):
+        """
+        Return the number of items hidden.
+        
+        :rtype:  int
+        """
+        return self._itemsHiddenCount
+
+    def itemsVisibleCount(self):
+        """
+        Return the number of items visible.
+        
+        :rtype:  int
+        """
+        return self._itemsVisibleCount
+
+    def _searchChanged(self):
+        """
+        Triggered when the search widget has changed.
+        
+        :rtype: None
+        """
+        t = time.time()
+        items = self.items()
+        validItems = list(self.filterItems(items))
+        invalidItems = list(set(items) - set(validItems))
+        self._itemsVisibleCount = len(validItems)
+        self._itemsHiddenCount = len(invalidItems)
+        self.itemsWidget().setItemsHidden(validItems, False)
+        self.itemsWidget().setItemsHidden(invalidItems, True)
+        item = self.itemsWidget().selectedItem()
+        if not item or item.isHidden():
+            self.itemsWidget().clearSelection()
+        if item:
+            self.itemsWidget().scrollToItem(item)
+        t = time.time() - t
+        plural = ''
+        if self._itemsVisibleCount > 1:
+            plural = 's'
+        self.itemsWidget().treeWidget().refreshGroupBy()
+        msg = 'Found {0} item{1} in {2:.3f} seconds.'
+        msg = msg.format(self._itemsVisibleCount, plural, t)
+        self.statusWidget().setInfo(msg)
 
     def showCreateWidget(self, plugin):
         """
@@ -590,23 +1090,23 @@ class LibraryWidget(studiolibrary.MayaDockWidgetMixin, QtGui.QWidget):
         :type plugin: studiolibrary.Plugin
         :rtype: None
         """
-        widget = plugin.createWidget(parent=self.ui.previewFrame)
+        widget = plugin.createWidget(parent=self._previewFrame)
         self.setCreateWidget(widget)
+
+    def setCreateWidget(self, widget):
+        """
+        :type widget: QtWidgets.QWidget
+        :rtype: None
+        """
+        self.setPreviewWidgetVisible(True)
+        self.recordsWidget().clearSelection()
+        self.setPreviewWidget(widget)
 
     def clearPreviewWidget(self):
         """
         Set the default preview widget.
         """
         widget = studiolibrary.PreviewWidget(None)
-        self.setPreviewWidget(widget)
-
-    def setCreateWidget(self, widget):
-        """
-        :type widget: QtGui.QWidget
-        :rtype: None
-        """
-        self.setPreviewWidgetVisible(True)
-        self.ui.recordsWidget.clearSelection()
         self.setPreviewWidget(widget)
 
     def setPreviewWidgetFromRecord(self, record):
@@ -626,139 +1126,141 @@ class LibraryWidget(studiolibrary.MayaDockWidgetMixin, QtGui.QWidget):
         else:
             self.clearPreviewWidget()
 
+    def previewWidget(self):
+        """
+        Return the current preview widget.
+        
+        :rtype: QtWidgets.QWidget
+        """
+        return self._previewWidget
+
     def setPreviewWidget(self, widget):
         """
-        :type widget: QtGui.QWidget
+        Set the preview widget.
+        
+        :type widget: QtWidgets.QWidget
         :rtype: None
         """
-        if self.ui.previewWidget == widget:
+        if self._previewWidget == widget:
             msg = 'Preview widget already contains widget "{0}"'
             msg.format(widget)
             logger.debug(msg)
         else:
             self.closePreviewWidget()
-            self.ui.previewWidget = widget
-            if self.ui.previewWidget:
-                self.ui.previewFrame.layout().addWidget(self.ui.previewWidget)
-                self.ui.previewWidget.show()
+            self._previewWidget = widget
+            if self._previewWidget:
+                self._previewFrame.layout().addWidget(self._previewWidget)
+                self._previewWidget.show()
 
     def closePreviewWidget(self):
         """
         Close and delete the preview widget.
-        """
-        if self.ui.previewWidget:
-            self.ui.previewWidget.close()
-        for i in range(self.ui.previewFrame.layout().count()):
-            widget2 = self.ui.previewFrame.layout().itemAt(i)
-            if widget2:
-                widget2 = widget2.widget()
-                self.ui.previewFrame.layout().removeWidget(widget2)
-                widget2.setParent(self)
-                widget2.hide()
-                widget2.close()
-                widget2.destroy()
-                del widget2
-
-    def reloadStyleSheet(self):
-        """
+        
         :rtype: None
         """
-        styleSheet = self.library().styleSheet()
-        theme = self.library().theme()
-        color = studioqt.Color.fromString(theme['RECORD_TEXT_COLOR'])
-        self.recordsWidget().setTextColor(color)
-        color = studioqt.Color.fromString(theme['RECORD_TEXT_SELECTED_COLOR'])
-        self.recordsWidget().setTextSelectedColor(color)
-        color = studioqt.Color.fromString(theme['RECORD_BACKGROUND_COLOR'])
-        self.recordsWidget().setBackgroundColor(color)
-        color = studioqt.Color.fromString(theme['RECORD_BACKGROUND_SELECTED_COLOR'])
-        self.recordsWidget().setBackgroundSelectedColor(color)
-        self.setStyleSheet(styleSheet)
+        if self._previewWidget:
+            self._previewWidget.close()
+        layout = self._previewFrame.layout()
+        while layout.count():
+            item = layout.takeAt(0)
+            item.widget().hide()
+            item.widget().close()
+            item.widget().deleteLater()
 
-    def centerWindow(self):
-        """
-        :rtype: None
-        """
-        geometry = self.frameGeometry()
-        pos = QtGui.QApplication.desktop().cursor().pos()
-        screen = QtGui.QApplication.desktop().screenNumber(pos)
-        centerPoint = QtGui.QApplication.desktop().screenGeometry(screen).center()
-        geometry.moveCenter(centerPoint)
-        self.move(geometry.topLeft())
+        self._previewWidget = None
 
     def settings(self):
         """
         :rtype: studiolibrary.MetaFile
         """
-        settings = self.library().settings()
         geometry = (self.parentX().geometry().x(),
          self.parentX().geometry().y(),
          self.parentX().geometry().width(),
          self.parentX().geometry().height())
-        settings.set('geometry', geometry)
-        settings.set('sizes', self.ui.splitter.sizes())
-        settings.set('dockSettings', self.dockSettings())
-        settings.set('foldersSettings', self.ui.foldersWidget.currentState())
-        settings.set('recordsSettings', self.recordsWidget().settings())
-        settings.set('isFoldersWidgetVisible', self.isFoldersWidgetVisible())
-        settings.set('isPreviewWidgetVisible', self.isPreviewWidgetVisible())
-        settings.set('isMenuBarWidgetVisible', self.isMenuBarWidgetVisible())
-        settings.set('isStatusBarWidgetVisible', self.isStatusBarWidgetVisible())
+        settings = {}
+        settings['dpi'] = self.dpi()
+        settings['geometry'] = geometry
+        settings['sizes'] = self._splitter.sizes()
+        settings['foldersWidgetVisible'] = self.isFoldersWidgetVisible()
+        settings['previewWidgetVisible'] = self.isPreviewWidgetVisible()
+        settings['menuBarWidgetVisible'] = self.isMenuBarWidgetVisible()
+        settings['statusBarWidgetVisible'] = self.isStatusBarWidgetVisible()
+        settings['recursiveSearchEnabled'] = self.isRecursiveSearchEnabled()
+        settings['dockWidget'] = self.dockSettings()
+        settings['searchWidget'] = self.searchWidget().settings()
+        settings['foldersWidget'] = self.foldersWidget().settings()
+        settings['recordsWidget'] = self.recordsWidget().settings()
         return settings
 
     def setSettings(self, settings):
         """
         :type settings: studiolibrary.MetaFile
         """
-        sizes = settings.get('sizes', [120, 280, 160])
+        self.itemsWidget().setToastEnabled(False)
+        dpi = settings.get('dpi', 1.0)
+        self.setDpi(dpi)
+        sizes = settings.get('sizes', [140, 280, 160])
         if len(sizes) == 3:
             self.setSizes(sizes)
         x, y, width, height = settings.get('geometry', [200,
          200,
-         670,
-         550])
+         800,
+         680])
         self.parentX().setGeometry(x, y, width, height)
-        if x < 0 or y < 0:
-            self.parentX().move(200, 200)
-        dockSettings = settings.get('dockSettings', {})
+        screenGeometry = QtWidgets.QApplication.desktop().screenGeometry()
+        if x < 0 or y < 0 or x > screenGeometry.x() or y > screenGeometry.y():
+            self.centerWindow()
+        self.reloadStyleSheet()
+        dockSettings = settings.get('dockWidget', {})
         self.setDockSettings(dockSettings)
-        foldersSettings = settings.get('foldersSettings', {})
-        self.ui.foldersWidget.restoreState(foldersSettings)
-        recordsSettings = settings.get('recordsSettings', {})
-        self.recordsWidget().setSettings(recordsSettings)
-        value = settings.get('isFoldersWidgetVisible', True)
+        value = settings.get('foldersWidgetVisible', True)
         self.setFoldersWidgetVisible(value)
-        value = settings.get('isMenuBarWidgetVisible', True)
+        value = settings.get('menuBarWidgetVisible', True)
         self.setMenuBarWidgetVisible(value)
-        value = settings.get('isPreviewWidgetVisible', True)
+        value = settings.get('previewWidgetVisible', True)
         self.setPreviewWidgetVisible(value)
-        value = settings.get('isStatusBarWidgetVisible', True)
+        value = settings.get('statusBarWidgetVisible', True)
         self.setStatusBarWidgetVisible(value)
+        value = settings.get('recursiveSearchEnabled', False)
+        self.setRecursiveSearchEnabled(value)
+        searchWidgetSettings = settings.get('searchWidget', {})
+        self.searchWidget().setSettings(searchWidgetSettings)
+        foldersWidgetSettings = settings.get('foldersWidget', {})
+        self.foldersWidget().setSettings(foldersWidgetSettings)
+        recordsWidgetSettings = settings.get('recordsWidget', {})
+        self.recordsWidget().setSettings(recordsWidgetSettings)
+        self.itemsWidget().setToastEnabled(True)
 
     def loadSettings(self):
         """
         :rtype: None
         """
+        self.setLoaderEnabled(False)
         try:
-            settings = self.library().readSettings()
-            self.setSettings(settings.data())
+            settings = self.library().settings().get('libraryWidget', {})
+            self.setSettings(settings)
         finally:
-            self.reloadRecords()
+            self.reloadStyleSheet()
+            self.setLoaderEnabled(True)
+            self.loadRecords()
 
+        self.loadFolderData()
         self._isLoaded = True
-
-    def isLoaded(self):
-        """
-        :rtype: bool
-        """
-        return self._isLoaded
 
     def saveSettings(self):
         """
         :rtype: None
         """
         settings = self.settings()
-        settings.save()
+        self.library().settings()['libraryWidget'] = settings
+        self.library().saveSettings()
+        self.saveFolderData()
+
+    def isLoaded(self):
+        """
+        :rtype: bool
+        """
+        return self._isLoaded
 
     def setSizes(self, sizes):
         """
@@ -770,26 +1272,33 @@ class LibraryWidget(studiolibrary.MayaDockWidgetMixin, QtGui.QWidget):
             pSize = 200
         if fSize == 0:
             fSize = 120
-        self.ui.splitter.setSizes([fSize, cSize, pSize])
-        self.ui.splitter.setStretchFactor(1, 1)
+        self._splitter.setSizes([fSize, cSize, pSize])
+        self._splitter.setStretchFactor(1, 1)
+
+    def centerWindow(self):
+        """
+        Center the widget to the center of the desktop.
+        
+        :rtype: None
+        """
+        geometry = self.frameGeometry()
+        pos = QtWidgets.QApplication.desktop().cursor().pos()
+        screen = QtWidgets.QApplication.desktop().screenNumber(pos)
+        centerPoint = QtWidgets.QApplication.desktop().screenGeometry(screen).center()
+        geometry.moveCenter(centerPoint)
+        self.parentX().move(geometry.topLeft())
 
     def event(self, event):
         """
-        :type event: QtGui.QEvent
-        :rtype: None
+        :type event: QtWidgets.QEvent
+        :rtype: QtWidgets.QEvent
         """
+        if isinstance(event, QtGui.QKeyEvent):
+            if studioqt.isControlModifier() and event.key() == QtCore.Qt.Key_F:
+                self.searchWidget().setFocus()
         if isinstance(event, QtGui.QStatusTipEvent):
-            self.ui.statusWidget.setInfo(event.tip())
-        return QtGui.QWidget.event(self, event)
-
-    def keyPressEvent(self, event):
-        """
-        :type event: QtGui.QKeyEvent
-        :rtype: None
-        """
-        if event.key() == QtCore.Qt.Key_F5:
-            self.reloadFolders()
-        QtGui.QWidget.keyPressEvent(self, event)
+            self.statusWidget().setInfo(event.tip())
+        return QtWidgets.QWidget.event(self, event)
 
     def keyReleaseEvent(self, event):
         """
@@ -799,62 +1308,236 @@ class LibraryWidget(studiolibrary.MayaDockWidgetMixin, QtGui.QWidget):
         for record in self.selectedRecords():
             record.keyReleaseEvent(event)
 
-        QtGui.QWidget.keyReleaseEvent(self, event)
+        QtWidgets.QWidget.keyReleaseEvent(self, event)
 
     def closeEvent(self, event):
         """
-        :type event: QtGui.QEvent
+        :type event: QtWidgets.QEvent
         :rtype: None
         """
         self.saveSettings()
-        QtGui.QWidget.closeEvent(self, event)
+        QtWidgets.QWidget.closeEvent(self, event)
 
     def showEvent(self, event):
         """
-        :type event: QtGui.QEvent
+        :type event: QtWidgets.QEvent
         :rtype: None
         """
-        QtGui.QWidget.showEvent(self, event)
+        QtWidgets.QWidget.showEvent(self, event)
+        if not self.isLoaded():
+            self.loadSettings()
+
+    def dpi(self):
+        """
+        Return the current dpi for the library widget.
+        
+        :rtype: float
+        """
+        return float(self._dpi)
+
+    def setDpi(self, dpi):
+        """
+        Set the current dpi for the library widget.
+        
+        :rtype: float
+        """
+        if not self.DPI_ENABLED:
+            dpi = 1.0
+        self._dpi = dpi
+        self.itemsWidget().setDpi(dpi)
+        self.menuBarWidget().setDpi(dpi)
+        self.foldersWidget().setDpi(dpi)
+        self.statusWidget().setFixedHeight(20 * dpi)
+        self._splitter.setHandleWidth(2 * dpi)
+        self.itemsWidget().setToast('DPI: {0}'.format(int(dpi * 100)))
+        self.reloadStyleSheet()
+
+    def _dpiSliderChanged(self, value):
+        """
+        Triggered the dpi action changes value.
+        
+        :rtype: float
+        """
+        dpi = value / 100.0
+        self.setDpi(dpi)
+
+    def iconColor(self):
+        """
+        Return the icon color.
+        
+        :rtype: studioqt.Color
+        """
+        return self.library().theme().iconColor()
+
+    def reloadStyleSheet(self):
+        """
+        Reload the style sheet to the current theme.
+        
+        :rtype: None
+        """
+        theme = self.library().theme()
+        theme.setDpi(self.dpi())
+        options = theme.options()
+        styleSheet = theme.styleSheet()
+        color = studioqt.Color.fromString(options['ITEM_TEXT_COLOR'])
+        self.recordsWidget().setTextColor(color)
+        color = studioqt.Color.fromString(options['ITEM_TEXT_SELECTED_COLOR'])
+        self.recordsWidget().setTextSelectedColor(color)
+        color = studioqt.Color.fromString(options['ITEM_BACKGROUND_COLOR'])
+        self.recordsWidget().setBackgroundColor(color)
+        color = studioqt.Color.fromString(options['ITEM_BACKGROUND_SELECTED_COLOR'])
+        self.recordsWidget().setBackgroundSelectedColor(color)
+        self.setStyleSheet(styleSheet)
+        self.searchWidget().update()
+        self.menuBarWidget().update()
+
+    def trashEnabled(self):
+        return self._trashEnabled
+
+    def setTrashEnabled(self, value):
+        self._trashEnabled = value
+
+    def trashPath(self):
+        """
+        :rtype: str
+        """
+        return self.library().path() + '/Trash'
+
+    def trashFolderExists(self):
+        """
+        :rtype: bool
+        """
+        return os.path.exists(self.trashPath())
+
+    def createTrashFolder(self):
+        """
+        :rtype: None
+        """
+        path = self.trashPath()
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+    def isTrashFolderVisible(self):
+        """
+        :rtype: bool
+        """
+        return self._isTrashFolderVisible
+
+    def setTrashFolderVisible(self, visible):
+        """
+        :type visible: str
+        :rtype: None
+        """
+        self._isTrashFolderVisible = visible
+        self.reloadFolders()
+
+    def isTrashEnabled(self):
+        """
+        :rtype: bool
+        """
+        folders = self.selectedFolders()
+        for folder in folders:
+            if 'Trash' in folder.path():
+                return False
+
+        records = self.selectedRecords()
+        for record in records:
+            if 'Trash' in record.path():
+                return False
+
+        return True
+
+    def trashSelectedFoldersDialog(self):
+        """
+        :rtype: None
+        """
+        records = self.selectedFolders()
+        if records:
+            title = 'Move selected folders to trash?'
+            msg = 'Are you sure you want to move the selected folder/s to the trash?'
+            result = self.window().questionDialog(msg, title=title)
+            if result == QtWidgets.QMessageBox.Yes:
+                self.foldersWidget().clearSelection()
+                self.trashRecords(records)
+
+    def trashSelectedRecordsDialog(self):
+        """
+        Show the "move to trash" dialog for the selected records.
+        
+        :rtype: QtWidgets.QMessageBox.Button
+        """
+        records = self.selectedRecords()
+        return self.trashRecordsDialog(records=records, title='Move selected records to trash?', message='Are you sure you want to move the selected record/s to the trash?')
+
+    def trashRecordsDialog(self, records, title, message):
+        """
+        Show the "move to trash" dialog.
+        
+        :type records: list[studiolibrary.Record]
+        :type title: str
+        :type message: str
+        
+        :rtype: QtWidgets.QMessageBox.Button
+        """
+        result = None
+        if records:
+            title = title
+            msg = message
+            result = self.window().questionDialog(msg, title=title)
+            if result == QtWidgets.QMessageBox.Yes:
+                self.trashRecords(records)
+        return result
+
+    def trashRecords(self, records):
+        """
+        :items records: list[studiolibrary.Record]
+        :rtype: None
+        """
+        trashPath = self.trashPath()
+        self.createTrashFolder()
         try:
-            if not self.isLoaded():
-                self.loadSettings()
+            for record in records:
+                record.move(trashPath)
+
         except Exception as msg:
-            raise
+            logger.exception(msg)
+            self.setError(msg)
         finally:
-            self.reloadStyleSheet()
+            self.loadRecords()
+
+    def setInfo(self, text):
+        self.statusWidget().setInfo(text)
+
+    def setToast(self, text, duration = 500):
+        self.itemsWidget().setToast(text, duration)
 
     def setUpdateAvailable(self):
-        self.ui.updateButton.show()
-
-    def warningDialog(self, message, title = 'Warning'):
-        return QtGui.QMessageBox.warning(self, title, str(message))
+        self._updateButton.show()
 
     def criticalDialog(self, message, title = 'Error'):
-        return QtGui.QMessageBox.critical(self, title, str(message))
-
-    def informationDialog(self, message, title = 'Information'):
-        return QtGui.QMessageBox.information(self, title, str(message))
+        self.setError(message)
+        return studioqt.MessageBox.critical(self, title, str(message))
 
     def questionDialog(self, message, title = 'Question'):
-        buttons = QtGui.QMessageBox.Yes | QtGui.QMessageBox.No | QtGui.QMessageBox.Cancel
-        return QtGui.QMessageBox.question(self, title, str(message), buttons)
+        buttons = QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Cancel
+        return studioqt.MessageBox.question(self, title, str(message), buttons)
 
-    def setError(self, text, msec = 6000):
+    def setError(self, text):
         text = str(text)
-        self.ui.statusWidget.setError(text, msec=msec)
+        self.statusWidget().setError(text)
+        self.setStatusBarWidgetVisible(True)
 
-    def setWarning(self, text, msec = 6000):
+    def setWarning(self, text):
         text = str(text)
-        self.ui.statusWidget.setWarning(text, msec=msec)
-        if self.isShowStatusDialog():
-            self.warningDialog(text)
-        else:
-            self.showStatus(True)
-
-    def setInfo(self, text, msec = 6000):
-        self.ui.statusWidget.setInfo(text, msec=msec)
+        self.statusWidget().setWarning(text)
+        self.setStatusBarWidgetVisible(True)
 
     def updateWindowTitle(self):
+        """
+        Update the window title with the version the lock status.
+        
+        :rtype: None
+        """
         title = 'Studio Library - '
         if self.isDocked():
             title += self.library().name()
@@ -864,27 +1547,27 @@ class LibraryWidget(studiolibrary.MayaDockWidgetMixin, QtGui.QWidget):
             title += ' (Locked)'
         self.setWindowTitle(title)
 
-    def showMessage(self, text, repaint = True):
-        self.ui.recordsWidget.showMessage(text, repaint=repaint)
-
     def setLoadedMessage(self, elapsedTime):
         """
         :type elapsedTime: time.time
         """
-        recordCount = len(self.ui.recordsWidget.items())
-        hiddenCount = self.ui.recordsWidget.itemsHiddenCount()
+        recordCount = len(self._itemsWidget.items())
+        hiddenCount = self.itemsHiddenCount()
         plural = ''
         if recordCount != 1:
             plural = 's'
         hiddenText = ''
         if hiddenCount > 0:
-            hiddenText = '%d items hidden.' % hiddenCount
-        self.ui.statusWidget.setInfo('Loaded %s item%s in %0.3f seconds. %s' % (recordCount,
-         plural,
-         elapsedTime,
-         hiddenText))
+            hiddenText = '{0} items hidden.'.format(hiddenCount)
+        msg = 'Loaded {0} item{1} in {2:.3f} seconds. {3}'
+        msg = msg.format(recordCount, plural, elapsedTime, hiddenText)
+        self.statusWidget().setInfo(msg)
 
     def setLocked(self, value):
+        """
+        :type value: bool
+        :rtype: None
+        """
         self._isLocked = value
         self.foldersWidget().setLocked(value)
         self.recordsWidget().setLocked(value)
@@ -899,14 +1582,17 @@ class LibraryWidget(studiolibrary.MayaDockWidgetMixin, QtGui.QWidget):
 
     def updateNewButton(self):
         if self.isLocked():
-            pixmap = studioqt.pixmap('lock', color=self.iconColor())
-            self.ui.createButton.setEnabled(True)
-            self.ui.createButton.setIcon(pixmap)
+            pixmap = studioqt.pixmap('lock')
+            self._newAction.setEnabled(False)
+            self._newAction.setIcon(pixmap)
         else:
-            pixmap = studioqt.pixmap('add', color=self.iconColor())
-            self.ui.createButton.setEnabled(True)
-            self.ui.createButton.setIcon(pixmap)
-            self.ui.createButton.show()
+            pixmap = studioqt.pixmap('add')
+            self._newAction.setEnabled(True)
+            self._newAction.setIcon(pixmap)
+        self.menuBarWidget().update()
+
+    def resetLibrary(self):
+        self.library().reset()
 
     def kwargs(self):
         """
@@ -916,7 +1602,7 @@ class LibraryWidget(studiolibrary.MayaDockWidgetMixin, QtGui.QWidget):
 
     def window(self):
         """
-        :rtype: QtGui.QWidget
+        :rtype: QtWidgets.QWidget
         """
         return self
 
@@ -950,32 +1636,46 @@ class LibraryWidget(studiolibrary.MayaDockWidgetMixin, QtGui.QWidget):
             raise Exception('Please select a record')
         result = record.showRenameDialog(parent=self)
         if result:
-            self.reloadRecords()
+            self.loadRecords()
             self.selectRecords([record])
 
-    def renameSelectedFolder(self):
+    def showCreateFolderDialog(self):
+        """
+        :rtype: None
+        """
         try:
-            self.ui.foldersWidget.showRenameDialog(parent=self)
+            self.foldersWidget().showCreateDialog(parent=self)
         except Exception as msg:
-            self.criticalDialog(msg)
+            self.setError(msg)
             raise
 
-    def selectRecordsFromPaths(self, paths):
-        records = self.recordsWidget().itemsFromPaths(paths)
-        self.selectRecords(records)
+    def selectPath(self, path):
+        self.selectPaths([path])
+
+    def selectPaths(self, paths):
+        """
+        :type paths: list[str]
+        :rtype: None
+        """
+        selection = self.selectedRecords()
+        self.recordsWidget().selectPaths(paths)
+        if self.selectedRecords() != selection:
+            self._itemSelectionChanged()
 
     def selectRecords(self, records):
-        self.recordsWidget().selectItems(records)
-        self.onRecordSelectionChanged()
+        paths = [ r.path() for r in records ]
+        self.selectPaths(paths)
 
     def selectFolders(self, folders):
-        self.ui.foldersWidget.selectFolders(folders)
-
-    def clearSelection(self):
-        self.ui.foldersWidget.clearSelection()
+        self._foldersWidget.selectFolders(folders)
 
     def selectedRecords(self):
-        return self.ui.recordsWidget.selectedItems()
+        return self._itemsWidget.selectedItems()
+
+    def selectedFolderPath(self):
+        folder = self.selectedFolder()
+        if folder:
+            return folder.path()
 
     def selectedFolder(self):
         """
@@ -986,7 +1686,7 @@ class LibraryWidget(studiolibrary.MayaDockWidgetMixin, QtGui.QWidget):
             return folders[0]
 
     def selectedFolders(self):
-        return self.ui.foldersWidget.selectedFolders()
+        return self._foldersWidget.selectedFolders()
 
     def plugins(self):
         """
@@ -1010,39 +1710,19 @@ class LibraryWidget(studiolibrary.MayaDockWidgetMixin, QtGui.QWidget):
     def clearRecords(self):
         self.recordsWidget().clear()
 
-    def listRecords(self, sort = studiolibrary.SortOption.Ordered):
+    def isRecursiveSearchEnabled(self):
         """
-        :rtype: list[studiolibrary.Record]
+        :rtype: int
         """
-        results = []
-        folders = self.foldersWidget().selectedFolders()
-        for folder in folders:
-            path = folder.path()
-            records = self.library().listRecords(path)
-            if records:
-                records = self.library().sortRecords(records, order=folder.order(), sort=studiolibrary.SortOption.Ordered)
-                results.extend(records)
+        return self._recursiveSearchEnabled
 
-        return results
-
-    def reloadRecords(self):
+    def setRecursiveSearchEnabled(self, value):
         """
+        :type value: int
         :rtype: None
         """
-        logger.debug("Loading records for library '%s'" % self.library().name())
-        elapsedTime = time.time()
-        selectedRecords = self.selectedRecords()
-        self.recordsWidget().clear()
-        records = self.listRecords()
-        self.recordsWidget().addItems(records)
-        if selectedRecords:
-            self.selectRecords(selectedRecords)
-        if self.selectedRecords() != selectedRecords:
-            self.onRecordSelectionChanged()
-        self.recordsWidget().refreshFilter()
-        elapsedTime = time.time() - elapsedTime
-        self.setLoadedMessage(elapsedTime)
-        logger.debug('Loaded records')
+        self._recursiveSearchEnabled = value
+        self.loadRecords()
 
     @staticmethod
     def help():
@@ -1050,31 +1730,6 @@ class LibraryWidget(studiolibrary.MayaDockWidgetMixin, QtGui.QWidget):
         :rtype: None
         """
         studiolibrary.package().openHelp()
-
-    def deleteSelectedRecords(self):
-        """
-        :rtype: None
-        """
-        items = self.recordsWidget().selectedItems()
-        if items:
-            msg = 'Are you sure you want to delete the selected record/s {0}'
-            msg = msg.format(str([ r.name() for r in items ]))
-            result = self.window().questionDialog(msg)
-            if result == QtGui.QMessageBox.Yes:
-                try:
-                    for record in items:
-                        record.delete()
-
-                except Exception as msg:
-                    self.setError(msg)
-                finally:
-                    self.reloadRecords()
-
-    def deleteSelectedFolders(self):
-        """
-        :rtype: None
-        """
-        self.foldersWidget().showDeleteDialog()
 
     def setDebugMode(self, value):
         """
@@ -1091,13 +1746,3 @@ class LibraryWidget(studiolibrary.MayaDockWidgetMixin, QtGui.QWidget):
         :rtype: bool
         """
         return self._isDebug
-
-    def showCreateFolderDialog(self):
-        """
-        :rtype: None
-        """
-        try:
-            self.ui.foldersWidget.createFolder(parent=self)
-        except Exception as msg:
-            self.setError(msg)
-            raise

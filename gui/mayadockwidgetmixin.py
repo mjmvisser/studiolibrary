@@ -1,14 +1,23 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary\gui\mayadockwidgetmixin.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary\gui\mayadockwidgetmixin.py
 import logging
-from PySide import QtGui
-from PySide import QtCore
+from studioqt import QtCore
+from studioqt import QtWidgets
 try:
     import maya.cmds
     import maya.OpenMayaUI as omui
-    from shiboken import wrapInstance
     isMaya = True
 except ImportError:
     isMaya = False
+
+try:
+    from shiboken import wrapInstance
+except Exception as msg:
+    print msg
+
+try:
+    from shiboken2 import wrapInstance
+except Exception as msg:
+    print msg
 
 __all__ = ['MayaDockWidgetMixin']
 logger = logging.getLogger(__name__)
@@ -20,6 +29,25 @@ class MayaDockWidgetMixin(object):
      'left',
      'right']
     dockingChanged = QtCore.Signal()
+
+    @staticmethod
+    def generateUniqueObjectName(name, attempts = 100):
+        """
+        Generate a unique name for the dock widget.
+        
+        :type name: str
+        :type attempts: int
+        :rtype: str
+        """
+        for i in range(1, attempts):
+            uniqueName = name + str(i)
+            controlExists = maya.cmds.control(uniqueName, exists=True)
+            if not controlExists:
+                return uniqueName
+
+        msg = 'Cannot find unique window name for "{0}"'
+        msg = msg.format(name)
+        raise ValueError(msg)
 
     @staticmethod
     def dockAreaStrMap():
@@ -48,6 +76,17 @@ class MayaDockWidgetMixin(object):
     def __init__(self, *args):
         self._dockWidgetName = None
         self._dockLayoutName = None
+
+    def setObjectName(self, name):
+        """
+        :type name: str
+        """
+        try:
+            name = self.generateUniqueObjectName(name)
+        except NameError as msg:
+            logger.exception(msg)
+
+        QtWidgets.QWidget.setObjectName(self, name)
 
     def setupDockSignals(self):
         dockWidget = self.dockWidget()
@@ -80,20 +119,20 @@ class MayaDockWidgetMixin(object):
 
     def showEvent(self, event):
         """
-        :type event: QtGui.QShowEvent
+        :type event: QtWidgets.QShowEvent
         """
-        QtGui.QWidget.showEvent(self, event)
+        QtWidgets.QWidget.showEvent(self, event)
         self.fixMinimumDockSize()
 
     def parentX(self):
         """
-        :rtype: QtGui.QWidget
+        :rtype: QtWidgets.QWidget
         """
         return self.parent() or self
 
     def dockWidget(self):
         """
-        :rtype: QtGui.QDockWidget
+        :rtype: QtWidgets.QDockWidget
         """
         return self.parent()
 
@@ -102,7 +141,7 @@ class MayaDockWidgetMixin(object):
         :rtype: QMainWindow
         """
         mainWindowPtr = omui.MQtUtil.mainWindow()
-        return wrapInstance(long(mainWindowPtr), QtGui.QMainWindow)
+        return wrapInstance(long(mainWindowPtr), QtWidgets.QMainWindow)
 
     def mapDockAreaToStr(self, dockArea):
         """
@@ -142,7 +181,7 @@ class MayaDockWidgetMixin(object):
         """
         if self.dockWidget():
             self.dockWidget().setWindowTitle(text)
-        QtGui.QWidget.setWindowTitle(self, text)
+        QtWidgets.QWidget.setWindowTitle(self, text)
 
     def isDocked(self):
         """
@@ -190,31 +229,31 @@ class MayaDockWidgetMixin(object):
         """
         Return a menu for editing the dock settings.
         
-        :rtype: QtGui.QMenu
+        :rtype: QtWidgets.QMenu
         """
-        menu = QtGui.QMenu(self)
+        menu = QtWidgets.QMenu(self)
         menu.setTitle('Dock')
-        action = QtGui.QAction('Set Floating', menu)
+        action = QtWidgets.QAction('Set Floating', menu)
         action.setEnabled(self.isDocked())
         action.triggered.connect(self.setFloating)
         menu.addAction(action)
         menu.addSeparator()
-        action = QtGui.QAction('Dock top', menu)
+        action = QtWidgets.QAction('Dock top', menu)
         action.setCheckable(True)
         action.setChecked(self.isDockedTop())
         action.triggered.connect(self.dockTop)
         menu.addAction(action)
-        action = QtGui.QAction('Dock left', menu)
+        action = QtWidgets.QAction('Dock left', menu)
         action.setCheckable(True)
         action.setChecked(self.isDockedLeft())
         action.triggered.connect(self.dockLeft)
         menu.addAction(action)
-        action = QtGui.QAction('Dock right', menu)
+        action = QtWidgets.QAction('Dock right', menu)
         action.setCheckable(True)
         action.setChecked(self.isDockedRight())
         action.triggered.connect(self.dockRight)
         menu.addAction(action)
-        action = QtGui.QAction('Dock bottom', menu)
+        action = QtWidgets.QAction('Dock bottom', menu)
         action.setCheckable(True)
         action.setChecked(self.isDockedBottom())
         action.triggered.connect(self.dockBottom)
@@ -249,7 +288,7 @@ class MayaDockWidgetMixin(object):
         :rtype: None
         """
         dockWidgetPtr = omui.MQtUtil.findControl(self._dockWidgetName)
-        dockWidget = wrapInstance(long(dockWidgetPtr), QtGui.QWidget)
+        dockWidget = wrapInstance(long(dockWidgetPtr), QtWidgets.QWidget)
         dockWidget.setMinimumSize(QtCore.QSize(20, 20))
 
     def dockWidth(self):
@@ -271,7 +310,7 @@ class MayaDockWidgetMixin(object):
         if self._dockWidgetName:
             maya.cmds.dockControl(self._dockWidgetName, r=True, edit=True, visible=True)
         else:
-            QtGui.QWidget.raise_(self)
+            QtWidgets.QWidget.raise_(self)
 
     def _createDockLayout(self):
         """

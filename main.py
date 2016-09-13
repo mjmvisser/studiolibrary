@@ -23,11 +23,13 @@ def main(
     path=None,
     show=True,
     plugins=None,
-    analytics=False,
+    analytics=True,
     root=None,  # Legacy
     **kwargs
 ):
     """
+    The main entry point for creating and loading a library.
+
     :type name: str
     :type path: str
     :type show: bool
@@ -42,7 +44,7 @@ def main(
     if not name:
         library = studiolibrary.Library.default()
     else:
-        library = studiolibrary.Library.fromName(name)
+        library = studiolibrary.Library.instance(name)
 
     if plugins is None:
         library.setPlugins(studiolibrary.Library.DEFAULT_PLUGINS)

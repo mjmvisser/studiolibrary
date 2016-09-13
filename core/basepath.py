@@ -1,5 +1,6 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary\core\basepath.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary\core\basepath.py
 import os
+import shutil
 import logging
 from . import utils
 __all__ = ['PathNotFoundError', 'PathRenameError', 'BasePath']
@@ -23,11 +24,27 @@ class BasePath(object):
         """
         :type path: str
         """
-        path = path or ''
-        path.replace('\\', '/')
         self._path = ''
+        path = path or ''
+        path = path.replace('\\', '/')
         if path:
             self.setPath(path)
+
+    def resolvePath(self, path, labels = None):
+        """
+        :type path: str
+        :type labels: dict
+        
+        :rtype: str
+        """
+        dirname, name, extension = utils.splitPath(self.path())
+        labels_ = {'name': name,
+         'path': self.path(),
+         'dirname': self.dirname(),
+         'extension': self.extension()}
+        if labels:
+            labels_.update(labels)
+        return path.format(**labels_)
 
     def openLocation(self):
         """
@@ -35,12 +52,6 @@ class BasePath(object):
         """
         path = self.path()
         utils.openLocation(path)
-
-    def id(self):
-        """
-        :rtype: str
-        """
-        return self.path()
 
     def path(self):
         """
@@ -64,8 +75,10 @@ class BasePath(object):
         """
         :rtype: None
         """
-        if self.exists():
+        if self.isFile():
             os.remove(self.path())
+        else:
+            os.removedirs(self.path())
 
     def extension(self):
         """
@@ -113,30 +126,45 @@ class BasePath(object):
         """
         :rtype: float
         """
-        key = 'mtime'
-        result = self.get(key, None)
-        if result is None:
-            result = os.path.getmtime(self.path())
-            self.set(key, result)
-        return self.get(key, '')
+        return os.path.getmtime(self.path())
 
     def ctime(self):
         """
         :rtype: float
         """
-        key = 'ctime'
-        result = self.get(key, None)
-        if result is None:
-            result = os.path.getctime(self.path())
-            self.set(key, result)
-        return self.get(key, '')
+        return os.path.getctime(self.path())
 
     def mkdir(self):
         """
         :rtype: None
         """
-        if not os.path.exists(self.dirname()):
-            os.makedirs(self.dirname())
+        dirname = self.dirname()
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+    def move(self, dst):
+        """
+        :type dst: str
+        :rtype: None
+        """
+        src = self.path()
+        if self.isFolder():
+            dst = dst + '/' + self.name()
+            dst = utils.generateUniquePath(dst)
+        shutil.move(src, dst)
+        self.setPath(dst)
+
+    def copy(self, dst):
+        """
+        :type dst: str
+        :rtype: None
+        """
+        src = self.path()
+        if self.isFile():
+            shutil.copy(src, dst)
+        else:
+            shutil.copytree(src, dst)
+        self.setPath(dst)
 
     def rename(self, name, extension = None, force = False):
         """

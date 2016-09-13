@@ -1,8 +1,8 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary\core\baseplugin.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary\core\baseplugin.py
 import os
 import inspect
 import logging
-from PySide import QtCore
+from studioqt import QtCore
 __all__ = ['BasePlugin']
 logger = logging.getLogger(__name__)
 
@@ -10,7 +10,7 @@ class BasePlugin(QtCore.QObject):
 
     def __init__(self, parent = None):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         """
         QtCore.QObject.__init__(self, parent)
         self._name = ''

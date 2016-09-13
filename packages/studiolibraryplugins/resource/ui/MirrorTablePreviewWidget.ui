@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>160</width>
-    <height>521</height>
+    <width>291</width>
+    <height>746</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -1075,7 +1075,7 @@ background-color: rgb(254, 255, 230, 0);</string>
    <item>
     <widget class="QFrame" name="previewButtons">
      <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
+      <enum>QFrame::NoFrame</enum>
      </property>
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
@@ -1190,7 +1190,7 @@ background-color: rgb(254, 255, 230, 0);</string>
       </sizepolicy>
      </property>
      <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
+      <enum>QFrame::NoFrame</enum>
      </property>
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>

@@ -1,4 +1,4 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary/packages/mutils\pose.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary/packages/mutils\pose.py
 """
 #
 # pose.py
@@ -37,6 +37,7 @@ p.load(namespaces=["character1", "character2"])
 p.load(objects=["Character1:Hand_L", "Character1:Finger_L"])
 
 """
+import shutil
 import mutils
 import logging
 try:
@@ -47,6 +48,36 @@ except Exception:
 
 __all__ = ['Pose']
 logger = logging.getLogger(__name__)
+
+def savePose(path, objects = None, iconPath = None, metadata = None):
+    """
+    Save the pose data for the given objects.
+    
+    Example:
+        path = "C:/example.pose"
+        pose = savePose(path, metadata={'description': 'Example pose'})
+        print pose.metadata()
+        # {'description': 'Example pose', 'user': 'Hovel', 'mayaVersion': u'2016'}
+    
+    :type path: str
+    :type objects: list[str]
+    :rtype: mutils.Pose
+    """
+    objects = objects or maya.cmds.ls(selection=True) or []
+    if not objects:
+        raise Exception('No objects selected. Please select at least one object.')
+    posePath = path + '/pose.json'
+    iconPath_ = path + '/thumbnail.jpg'
+    if iconPath:
+        shutil.move(iconPath, iconPath_)
+    else:
+        mutils.createSnapshot(iconPath_)
+    pose = mutils.Pose.fromObjects(objects)
+    if metadata:
+        pose.updateMetadata(metadata)
+    pose.save(posePath)
+    return pose
+
 
 class Pose(mutils.SelectionSet):
 
@@ -144,7 +175,7 @@ class Pose(mutils.SelectionSet):
         logger.debug("Close Load '%s'" % self.path())
 
     @mutils.timing
-    def load(self, objects = None, namespaces = None, attrs = None, blend = 100, key = False, cache = True, mirror = False, refresh = False, batchMode = False, mirrorTable = None, onlyConnected = False, clearSelection = False, ignoreConnected = False):
+    def load(self, objects = None, namespaces = None, attrs = None, blend = 100, key = False, cache = True, mirror = False, refresh = False, batchMode = False, mirrorTable = None, onlyConnected = False, clearSelection = False, ignoreConnected = False, search = None, replace = None):
         """
         :type objects: list[str]
         :type namespaces: list[str]
@@ -159,7 +190,7 @@ class Pose(mutils.SelectionSet):
             mirror = False
         if batchMode:
             key = False
-        self.updateCache(objects=objects, namespaces=namespaces, cache=cache, dstAttrs=attrs, mirrorTable=mirrorTable, onlyConnected=onlyConnected, ignoreConnected=ignoreConnected)
+        self.updateCache(objects=objects, namespaces=namespaces, cache=cache, dstAttrs=attrs, mirrorTable=mirrorTable, onlyConnected=onlyConnected, ignoreConnected=ignoreConnected, search=search, replace=replace)
         self.beforeLoad(clearSelection=clearSelection)
         try:
             self.loadCache(blend=blend, key=key, mirror=mirror)
@@ -170,7 +201,7 @@ class Pose(mutils.SelectionSet):
         if refresh:
             maya.cmds.refresh(cv=True)
 
-    def updateCache(self, objects = None, namespaces = None, dstAttrs = None, ignoreConnected = False, onlyConnected = False, cache = True, mirrorTable = None):
+    def updateCache(self, objects = None, namespaces = None, dstAttrs = None, ignoreConnected = False, onlyConnected = False, cache = True, mirrorTable = None, search = None, replace = None):
         """
         :type objects: list[str]
         :type namespaces: list[str]
@@ -185,7 +216,7 @@ class Pose(mutils.SelectionSet):
             usingNamespaces = not objects and namespaces
             if mirrorTable:
                 self.setMirrorTable(mirrorTable)
-            matches = mutils.matchNames(srcObjects, dstObjects=dstObjects, dstNamespaces=namespaces)
+            matches = mutils.matchNames(srcObjects, dstObjects=dstObjects, dstNamespaces=namespaces, search=search, replace=replace)
             for srcNode, dstNode in matches:
                 self.cacheNode(srcNode, dstNode, dstAttrs=dstAttrs, onlyConnected=onlyConnected, ignoreConnected=ignoreConnected, usingNamespaces=usingNamespaces)
 

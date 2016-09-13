@@ -1,6 +1,7 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary\gui\settingsdialog.py
-from PySide import QtGui
-from PySide import QtCore
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary\gui\settingsdialog.py
+from studioqt import QtGui
+from studioqt import QtCore
+from studioqt import QtWidgets
 import studioqt
 import studiolibrary
 __all__ = ['SettingsDialog']
@@ -14,7 +15,7 @@ class SettingsDialogSignal(QtCore.QObject):
     onBackgroundColorChanged = QtCore.Signal(object)
 
 
-class SettingsDialog(QtGui.QDialog):
+class SettingsDialog(QtWidgets.QDialog):
     """
     """
     signal = SettingsDialogSignal()
@@ -25,16 +26,21 @@ class SettingsDialog(QtGui.QDialog):
 
     def __init__(self, parent, library):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :type library: studiolibrary.Library
         """
-        QtGui.QDialog.__init__(self, parent)
+        QtWidgets.QDialog.__init__(self, parent)
         studioqt.loadUi(self)
-        self.setWindowTitle('Studio Library - %s' % studiolibrary.version())
-        self.ui.saveButton.clicked.connect(self.save)
-        self.ui.cancelButton.clicked.connect(self.close)
+        resource = studiolibrary.resource()
+        self.setWindowIcon(resource.icon('icon_black'))
+        windowTitle = 'Studio Library - {version}'
+        windowTitle = windowTitle.format(version=studiolibrary.version())
+        self.setWindowTitle(windowTitle)
+        self.ui.acceptButton.clicked.connect(self.accept)
+        self.ui.rejectButton.clicked.connect(self.close)
         self.ui.browseColorButton.clicked.connect(self.browseColor)
         self.ui.browseLocationButton.clicked.connect(self.browseLocation)
+        self.ui.browseBackgroundColorButton.clicked.connect(self.browseBackgroundColor)
         self.ui.theme1Button.clicked.connect(self.setTheme1)
         self.ui.theme2Button.clicked.connect(self.setTheme2)
         self.ui.theme3Button.clicked.connect(self.setTheme3)
@@ -45,16 +51,31 @@ class SettingsDialog(QtGui.QDialog):
         self.ui.background1Button.clicked.connect(self.setBackground1)
         self.ui.background2Button.clicked.connect(self.setBackground2)
         self.ui.background3Button.clicked.connect(self.setBackground3)
+        self.ui.background4Button.clicked.connect(self.setBackground4)
         self._library = library
         self.updateStyleSheet()
         self.center()
 
-    def save(self):
+    def acceptButton(self):
         """
+        :rtype: QtWidgets.QPushButton
+        """
+        return self.ui.acceptButton
+
+    def rejectButton(self):
+        """
+        :rtype: QtWidgets.QPushButton
+        """
+        return self.ui.rejectButton
+
+    def accept(self):
+        """
+        Hides the modal dialog and sets the result code to Accepted.
+        
         :rtype: None
         """
         self.validate()
-        self.accept()
+        QtWidgets.QDialog.accept(self)
 
     def validate(self):
         """
@@ -65,14 +86,14 @@ class SettingsDialog(QtGui.QDialog):
             library.validateName(self.name())
             library.validatePath(self.location())
         except Exception as e:
-            QtGui.QMessageBox.critical(self, 'Validate Error', str(e))
+            QtWidgets.QMessageBox.critical(self, 'Validate Error', str(e))
             raise
 
     def center(self, width = 600, height = 435):
         """
         :rtype: None
         """
-        desktopRect = QtGui.QApplication.desktop().availableGeometry()
+        desktopRect = QtWidgets.QApplication.desktop().availableGeometry()
         center = desktopRect.center()
         self.setGeometry(0, 0, width, height)
         self.move(center.x() - self.width() * 0.5, center.y() - self.height() * 0.5)
@@ -151,43 +172,43 @@ class SettingsDialog(QtGui.QDialog):
     def setTheme1(self):
         """
         """
-        c = studioqt.Color(0, 175, 255)
+        c = studioqt.Color(230, 60, 60, 255)
         self.setColor(c)
 
     def setTheme2(self):
         """
         """
-        c = studioqt.Color(150, 75, 240)
+        c = studioqt.Color(255, 90, 40)
         self.setColor(c)
 
     def setTheme3(self):
         """
         """
-        c = studioqt.Color(240, 100, 150)
+        c = studioqt.Color(255, 125, 100, 255)
         self.setColor(c)
 
     def setTheme4(self):
         """
         """
-        c = studioqt.Color(240, 75, 50)
+        c = studioqt.Color(250, 200, 0, 255)
         self.setColor(c)
 
     def setTheme5(self):
         """
         """
-        c = studioqt.Color(250, 155, 20)
+        c = studioqt.Color(80, 200, 140, 255)
         self.setColor(c)
 
     def setTheme6(self):
         """
         """
-        c = studioqt.Color(255, 210, 20)
+        c = studioqt.Color(50, 180, 240, 255)
         self.setColor(c)
 
     def setTheme7(self):
         """
         """
-        c = studioqt.Color(120, 200, 0)
+        c = studioqt.Color(110, 110, 240, 255)
         self.setColor(c)
 
     def setBackground1(self):
@@ -205,7 +226,13 @@ class SettingsDialog(QtGui.QDialog):
     def setBackground3(self):
         """
         """
-        c = studioqt.Color(50, 50, 50)
+        c = studioqt.Color(50, 50, 52)
+        self.setBackgroundColor(c)
+
+    def setBackground4(self):
+        """
+        """
+        c = studioqt.Color(40, 40, 50)
         self.setBackgroundColor(c)
 
     def setColor(self, color):
@@ -231,19 +258,101 @@ class SettingsDialog(QtGui.QDialog):
         :rtype: None
         """
         color = self.color()
-        d = QtGui.QColorDialog(self)
-        d.connect(d, QtCore.SIGNAL('currentColorChanged (const QColor&)'), self.setColor)
-        d.open()
+        d = QtWidgets.QColorDialog(self)
+        d.setCurrentColor(color)
+        colors = [(230, 60, 60),
+         (250, 80, 130),
+         (255, 90, 40),
+         (240, 100, 170),
+         (255, 125, 100),
+         (240, 200, 150),
+         (250, 200, 0),
+         (225, 200, 40),
+         (80, 200, 140),
+         (80, 225, 120),
+         (50, 180, 240),
+         (100, 200, 245),
+         (130, 110, 240),
+         (180, 160, 255),
+         (180, 110, 240),
+         (210, 110, 255)]
+        index = -1
+        for colorR, colorG, colorB in colors:
+            for i in range(0, 3):
+                index += 1
+                if colorR < 0:
+                    colorR = 0
+                if colorG < 0:
+                    colorG = 0
+                if colorB < 0:
+                    colorB = 0
+                try:
+                    standardColor = QtGui.QColor(colorR, colorG, colorB)
+                    d.setStandardColor(index, standardColor)
+                except:
+                    standardColor = QtGui.QColor(colorR, colorG, colorB).rgba()
+                    d.setStandardColor(index, standardColor)
+
+                colorR -= 20
+                colorB -= 20
+                colorG -= 20
+
+        d.currentColorChanged.connect(self.setColor)
+        d.open(self, QtCore.SLOT('blankSlot()'))
         if d.exec_():
             self.setColor(d.selectedColor())
         else:
             self.setColor(color)
 
+    @QtCore.Slot()
+    def blankSlot(self):
+        """
+        Blank slot to fix an issue with PySide2.QColorDialog.open()
+        """
+        pass
+
+    def browseBackgroundColor(self):
+        """
+        :rtype: None
+        """
+        color = self.backgroundColor()
+        d = QtWidgets.QColorDialog(self)
+        d.setCurrentColor(color)
+        colors = [(0, 0, 0),
+         (20, 20, 30),
+         (0, 30, 60),
+         (0, 60, 60),
+         (0, 60, 30),
+         (60, 0, 10),
+         (60, 0, 40),
+         (40, 15, 5)]
+        index = -1
+        for colorR, colorG, colorB in colors:
+            for i in range(0, 6):
+                index += 1
+                try:
+                    standardColor = QtGui.QColor(colorR, colorG, colorB)
+                    d.setStandardColor(index, standardColor)
+                except:
+                    standardColor = QtGui.QColor(colorR, colorG, colorB).rgba()
+                    d.setStandardColor(index, standardColor)
+
+                colorR += 20
+                colorB += 20
+                colorG += 20
+
+        d.currentColorChanged.connect(self.setBackgroundColor)
+        d.open(self, QtCore.SLOT('blankSlot()'))
+        if d.exec_():
+            self.setBackgroundColor(d.selectedColor())
+        else:
+            self.setBackgroundColor(color)
+
     def updateStyleSheet(self):
         """
         :rtype: None
         """
-        self.setStyleSheet(self.library().styleSheet())
+        self.setStyleSheet(self.library().theme().styleSheet())
 
     def browseLocation(self):
         """
@@ -264,6 +373,6 @@ class SettingsDialog(QtGui.QDialog):
         if not path:
             from os.path import expanduser
             path = expanduser('~')
-        path = str(QtGui.QFileDialog.getExistingDirectory(None, title, path))
+        path = str(QtWidgets.QFileDialog.getExistingDirectory(None, title, path))
         path = path.replace('\\', '/')
         return path

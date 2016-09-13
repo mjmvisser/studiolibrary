@@ -1,6 +1,7 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary/packages/studioqt\resource.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary/packages/studioqt\resource.py
 import os
-from PySide import QtGui
+from studioqt import QtGui
+from studioqt import QtWidgets
 import studioqt
 
 class Resource(object):
@@ -38,7 +39,7 @@ class Resource(object):
         """
         :type name: str
         :type extension: str
-        :rtype: QtGui.QPixmap
+        :rtype: QtWidgets.QPixmap
         """
         path = self.get(scope, name + '.' + extension)
         pixmap = studioqt.Pixmap(path)

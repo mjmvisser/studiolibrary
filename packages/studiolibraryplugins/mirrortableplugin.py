@@ -46,8 +46,9 @@ record.load(objects=objects, namespaces=namespaces, animation=True, time=None)
 import os
 import logging
 
-from PySide import QtGui
-from PySide import QtCore
+from studioqt import QtGui
+from studioqt import QtCore
+from studioqt import QtWidgets
 
 import mutils
 import studiolibrary
@@ -65,14 +66,8 @@ logger = logging.getLogger(__name__)
 
 MirrorOption = mutils.MirrorOption
 
-class Plugin(mayabaseplugin.Plugin):
 
-    @staticmethod
-    def settings():
-        """
-        :rtype: studiolibrary.Settings
-        """
-        return studiolibrary.Settings.instance("Plugin", "Mirror Table")
+class Plugin(mayabaseplugin.Plugin):
 
     def __init__(self, library):
         """
@@ -95,7 +90,7 @@ class Plugin(mayabaseplugin.Plugin):
 
     def infoWidget(self, parent, record):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :type record: Record
         :rtype: MirrorTableInfoWidget
         """
@@ -103,7 +98,7 @@ class Plugin(mayabaseplugin.Plugin):
 
     def createWidget(self, parent):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :rtype: MirrorTableCreateWidget
         """
         record = self.record()
@@ -111,7 +106,7 @@ class Plugin(mayabaseplugin.Plugin):
 
     def previewWidget(self, parent, record):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :type record: Record
         :rtype: MirrorTablePreviewWidget
         """
@@ -129,11 +124,14 @@ class Record(mayabaseplugin.Record):
         self.setTransferBasename("mirrortable.json")
         self.setTransferClass(mutils.MirrorTable)
 
-    def settings(self):
+    def previewWidget(self, parent=None):
         """
-        :rtype: studiolibrary.Settings
+        Support for Studio Library 2.0
+
+        :type parent: QtWidgets.QWidget
+        :rtype: PosePreviewWidget
         """
-        return Plugin.settings()
+        return MirrorTablePreviewWidget(parent=parent, record=self)
 
     def keyPressEvent(self, event):
         """
@@ -179,11 +177,11 @@ class Record(mayabaseplugin.Record):
         """
         objects = objects or []
         self.transferObject().load(
-                objects=objects,
-                namespaces=namespaces,
-                option=option,
-                animation=animation,
-                time=time,
+            objects=objects,
+            namespaces=namespaces,
+            option=option,
+            animation=animation,
+            time=time,
         )
 
     def save(self, objects, leftSide, rightSide, path=None, iconPath=None):
@@ -196,7 +194,7 @@ class Record(mayabaseplugin.Record):
         """
         logger.info("Saving: %s" % self.transferPath())
 
-        tempDir = studiolibrary.TempDir("Transfer", makedirs=True)
+        tempDir = mutils.TempDir("Transfer", makedirs=True)
         tempPath = os.path.join(tempDir.path(), self.transferBasename())
 
         t = self.transferClass().fromObjects(
@@ -213,7 +211,7 @@ class MirrorTableInfoWidget(mayabaseplugin.InfoWidget):
 
     def __init__(self, *args, **kwargs):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :type record: Record
         """
         mayabaseplugin.InfoWidget.__init__(self, *args, **kwargs)
@@ -223,7 +221,7 @@ class MirrorTablePreviewWidget(mayabaseplugin.PreviewWidget):
 
     def __init__(self, *args, **kwargs):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :type record: Record
         """
         mayabaseplugin.PreviewWidget.__init__(self, *args, **kwargs)
@@ -289,7 +287,7 @@ class MirrorTableCreateWidget(mayabaseplugin.CreateWidget):
 
     def __init__(self, *args, **kwargs):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :type record: Record
         """
         mayabaseplugin.CreateWidget.__init__(self, *args, **kwargs)

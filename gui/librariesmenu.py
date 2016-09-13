@@ -1,18 +1,19 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary\gui\librariesmenu.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary\gui\librariesmenu.py
 import sys
 import logging
-from PySide import QtGui
+from studioqt import QtGui
+from studioqt import QtWidgets
 import studioqt
 import studiolibrary
 __all__ = ['LibrariesMenu']
 logger = logging.getLogger(__name__)
 
-class LibrariesMenu(QtGui.QMenu):
+class LibrariesMenu(QtWidgets.QMenu):
 
     def __init__(self, *args):
         """
         """
-        QtGui.QMenu.__init__(self, *args)
+        QtWidgets.QMenu.__init__(self, *args)
         self.setTitle('Libraries')
         self.reload()
 
@@ -25,15 +26,15 @@ class LibrariesMenu(QtGui.QMenu):
             action.triggered.connect(library.load)
 
 
-class LibraryAction(QtGui.QWidgetAction):
-    STYLE_SHEET = '\n#actionIcon {\n    background-color: ACCENT_COLOR;\n}\n\n#actionWidget {\n    background-color: BACKGROUND_COLOR;\n}\n\n#actionLabel, #actionLabel, #actionOption {\n    background-color: BACKGROUND_COLOR;\n    color: rgb(255, 255, 255);\n}\n#actionLabel:hover, #actionLabel:hover, #actionOption:hover {\n    background-color: COLOR;\n    color: rgb(255, 255, 255);\n}\n'
+class LibraryAction(QtWidgets.QWidgetAction):
+    STYLE_SHEET = '\n#actionIcon {\n    background-color: ACCENT_COLOR;\n}\n\n#actionWidget {\n    background-color: BACKGROUND_COLOR;\n}\n\n#actionLabel, #actionLabel, #actionOption {\n    background-color: BACKGROUND_COLOR;\n    color: rgb(255, 255, 255);\n}\n#actionLabel:hover, #actionLabel:hover, #actionOption:hover {\n    background-color: ACCENT_COLOR;\n    color: rgb(255, 255, 255);\n}\n'
 
     def __init__(self, parent, library):
         """
-        :type parent: QtGui.QMenu
+        :type parent: QtWidgets.QMenu
         :type library: studiolibrary.Library
         """
-        QtGui.QWidgetAction.__init__(self, parent)
+        QtWidgets.QWidgetAction.__init__(self, parent)
         self._library = library
         self.setText(self.library().name())
 
@@ -52,30 +53,31 @@ class LibraryAction(QtGui.QWidgetAction):
 
     def createWidget(self, parent):
         """
-        :type parent: QtGui.QMenu
+        :type parent: QtWidgets.QMenu
         """
         height = 25
         spacing = 1
-        actionWidget = QtGui.QFrame(parent)
+        options = self.library().theme().options()
+        styleSheet = studioqt.StyleSheet.fromText(LibraryAction.STYLE_SHEET, options=options)
+        actionWidget = QtWidgets.QFrame(parent)
         actionWidget.setObjectName('actionWidget')
-        styleSheet = studioqt.StyleSheet.fromText(LibraryAction.STYLE_SHEET, options=self.library().theme())
         actionWidget.setStyleSheet(styleSheet.data())
-        actionLabel = QtGui.QLabel(self.library().name(), actionWidget)
+        actionLabel = QtWidgets.QLabel(self.library().name(), actionWidget)
         actionLabel.setObjectName('actionLabel')
         actionLabel.setFixedHeight(height)
         iconColor = QtGui.QColor(255, 255, 255, 220)
         icon = studiolibrary.resource().icon('delete', color=iconColor)
-        actionOption = QtGui.QPushButton('', actionWidget)
+        actionOption = QtWidgets.QPushButton('', actionWidget)
         actionOption.setObjectName('actionOption')
         actionOption.setIcon(icon)
         actionOption.setFixedHeight(height + spacing)
         actionOption.setFixedWidth(height)
         actionOption.clicked.connect(self.deleteLibrary)
-        actionIcon = QtGui.QLabel('', actionWidget)
+        actionIcon = QtWidgets.QLabel('', actionWidget)
         actionIcon.setObjectName('actionIcon')
         actionIcon.setFixedWidth(10)
         actionIcon.setFixedHeight(height)
-        actionLayout = QtGui.QHBoxLayout(actionWidget)
+        actionLayout = QtWidgets.QHBoxLayout(actionWidget)
         actionLayout.setSpacing(0)
         actionLayout.setContentsMargins(0, 0, 0, 0)
         actionLayout.addWidget(actionIcon, stretch=1)
@@ -84,7 +86,7 @@ class LibraryAction(QtGui.QWidgetAction):
         return actionWidget
 
 
-class Example(QtGui.QMainWindow):
+class Example(QtWidgets.QMainWindow):
 
     def __init__(self):
         super(Example, self).__init__()
@@ -99,7 +101,7 @@ class Example(QtGui.QMainWindow):
 
 def main():
     logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(funcName)s: %(message)s', filemode='w')
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     e = Example()
     sys.exit(app.exec_())
 

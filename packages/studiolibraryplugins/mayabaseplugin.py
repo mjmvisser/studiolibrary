@@ -19,14 +19,16 @@ import shutil
 import logging
 import traceback
 
-from PySide import QtGui
-from PySide import QtCore
+from studioqt import QtGui
+from studioqt import QtCore
+from studioqt import QtWidgets
 
 import studioqt
 import studiolibrary
 
 try:
     import mutils
+    import mutils.gui
     import maya.cmds
 except ImportError, msg:
     print msg
@@ -55,81 +57,10 @@ class NamespaceOption:
 
 class Plugin(studiolibrary.Plugin):
 
-    def __init__(self, library):
-        """
-        :type library: studiolibrary.Library
-        """
-        studiolibrary.Plugin.__init__(self, library)
-
-    @staticmethod
-    def settings():
-        """
-        :rtype: studiolibrary.Settings
-        """
-        return studiolibrary.Settings.instance("Plugin", "MayaBase")
-
-    @staticmethod
-    def tempIconPath(clean=False):
-        """
-        :rtype: str
-        """
-        tempDir = studiolibrary.TempDir("icon", clean=clean)
-        return tempDir.path() + "/thumbnail.jpg"
-
-    @staticmethod
-    def tempIconSequencePath(clean=False):
-        """
-        :rtype: str
-        """
-        tempDir = studiolibrary.TempDir("sequence", clean=clean)
-        return tempDir.path() + "/thumbnail.jpg"
-
-    @staticmethod
-    def createTempIcon():
-        """
-        :rtype: str
-        """
-        path = Plugin.tempIconPath()
-        return mutils.snapshot(path=path)
-
-    @staticmethod
-    def createTempIconSequence(startFrame=None, endFrame=None, step=1):
-        """
-        :type startFrame: int
-        :type endFrame: int
-        :type step: int
-        :rtype: str
-        """
-        path = Plugin.tempIconSequencePath(clean=True)
-
-        sequencePath = mutils.snapshot(
-            path=path,
-            start=startFrame,
-            end=endFrame,
-            step=step,
-        )
-
-        iconPath = Plugin.tempIconPath()
-        shutil.copyfile(sequencePath, iconPath)
-        return iconPath, sequencePath
-
-    @staticmethod
-    def selectionModifiers():
-        """
-        :rtype: dict[bool]
-        """
-        result = {"add": False, "deselect": False}
-        modifiers = QtGui.QApplication.keyboardModifiers()
-
-        if modifiers == QtCore.Qt.ShiftModifier:
-            result["deselect"] = True
-        elif modifiers == QtCore.Qt.ControlModifier:
-            result["add"] = True
-
-        return result
-
     def setLoggerLevel(self, level):
         """
+        Triggered when the user chooses debug mode.
+
         :type level: int
         :rtype: None
         """
@@ -138,26 +69,6 @@ class Plugin(studiolibrary.Plugin):
 
         logger_ = logging.getLogger("studiolibraryplugins")
         logger_.setLevel(level)
-
-    def recordContextMenu(self, menu, records):
-        """
-        :type menu: QtGui.QMenu
-        :type records: list[Record]
-        :rtype: None
-        """
-        import selectionsetmenu
-
-        if records:
-
-            record = records[-1]
-
-            action = selectionsetmenu.selectContentAction(record, parent=menu)
-            menu.addAction(action)
-            menu.addSeparator()
-
-            subMenu = record.selectionSetsMenu(parent=menu, enableSelectContent=False)
-            menu.addMenu(subMenu)
-            menu.addSeparator()
 
 
 class Record(studiolibrary.Record):
@@ -177,6 +88,20 @@ class Record(studiolibrary.Record):
         self._transferObject = None
         self._transferBasename = None
 
+    def settings(self):
+        """
+        :rtype: studiolibrary.Settings
+        """
+        return self.plugin().settings()
+
+    def showErrorDialog(self, message, title="Record Error"):
+        """
+        :type title: str
+        :type message: str
+        :rtype: int
+        """
+        return studioqt.MessageBox.critical(None, title, str(message))
+
     def prettyPrint(self):
         """
         :rtype: None
@@ -186,43 +111,62 @@ class Record(studiolibrary.Record):
         print json.dumps(self.transferObject().data(), indent=2)
         print("----------------\n")
 
-    @staticmethod
-    def createTempSnapshot():
+    def owner(self):
         """
-        Convenience method.
-
         :rtype: str
         """
-        return Plugin.createTempSnapshot()
+        user = studiolibrary.Record.owner(self)
+        transferObject = self.transferObject()
 
-    @staticmethod
-    def createTempImageSequence(startFrame, endFrame, step=1):
+        if not user and transferObject:
+            user = self.transferObject().metadata().get("user")
+        return user
+
+    def ctime(self):
         """
-        Convenience method.
-
-        :type startFrame: int
-        :type endFrame: int
-        :type step: int
         :rtype: str
         """
-        imageSequence = Plugin.createTempImageSequence(
-                startFrame=startFrame,
-                endFrame=endFrame,
-                step=step
-        )
-        return imageSequence
+        path = self.path()
+        ctime = ""
 
-    def showErrorDialog(self, message, title="Record Error"):
+        if os.path.exists(path):
+            ctime = studiolibrary.Record.ctime(self)
+
+            if not ctime:
+                ctime = int(os.path.getctime(path))
+
+        return ctime
+
+    def description(self):
         """
-        :type title: str
-        :type message: str
-        :rtype: int
+        :rtype: str
         """
-        return QtGui.QMessageBox.critical(None, title, str(message))
+        description = studiolibrary.Record.description(self)
+        transferObject = self.transferObject()
+
+        if not description and transferObject:
+            description = self.transferObject().metadata().get("description")
+        return description
+
+    def contextMenu(self, menu, records=None):
+        """
+        :type menu: QtWidgets.QMenu
+        :type records: list[Record]
+        :rtype: None
+        """
+        import selectionsetmenu
+
+        action = selectionsetmenu.selectContentAction(self, parent=menu)
+        menu.addAction(action)
+        menu.addSeparator()
+
+        subMenu = self.selectionSetsMenu(parent=menu, enableSelectContent=False)
+        menu.addMenu(subMenu)
+        menu.addSeparator()
 
     def showSelectionSetsMenu(self, **kwargs):
         """
-        :rtype: QtGui.QAction
+        :rtype: QtWidgets.QAction
         """
         menu = self.selectionSetsMenu(**kwargs)
         position = QtGui.QCursor().pos()
@@ -231,9 +175,9 @@ class Record(studiolibrary.Record):
 
     def selectionSetsMenu(self, parent=None, enableSelectContent=True):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         :type enableSelectContent: bool
-        :rtype: QtGui.QMenu
+        :rtype: QtWidgets.QMenu
         """
         import selectionsetmenu
 
@@ -247,18 +191,50 @@ class Record(studiolibrary.Record):
         )
         return menu
 
-    def mirrorTables(self):
+    def mirrorTable(self):
         """
-        :rtype: str
+        Return the mirror table object for this record.
+
+        :rtype: mutils.MirrorTable or None
         """
-        return studiolibrary.findPaths(self.path(), ".mirror", direction=studiolibrary.Direction.Up)
+        mirrorTable = None
+        path = self.mirrorTablePath()
+        if path:
+            mirrorTable = mutils.MirrorTable.fromPath(path)
+        return mirrorTable
+
+    def mirrorTablePath(self):
+        """
+        Return the mirror table path for this record.
+
+        :rtype: str or None
+        """
+        path = None
+        paths = self.mirrorTablePaths()
+        if paths:
+            path = paths[0]
+        return path
+
+    def mirrorTablePaths(self):
+        """
+        Return all the mirror table paths for this record.
+
+        :rtype: list[str]
+        """
+        paths = list(studiolibrary.findPaths(
+                self.path(),
+                match=lambda path: path.endswith(".mirror"),
+                direction=studiolibrary.Direction.Up
+            )
+        )
+        return paths
 
     def selectContent(self, namespaces=None, **kwargs):
         """
         :type namespaces: list[str]
         """
         namespaces = namespaces or self.namespaces()
-        kwargs = kwargs or Plugin.selectionModifiers()
+        kwargs = kwargs or mutils.selectionModifiers()
 
         msg = "Select content: Record.selectContent(namespacea={0}, kwargs={1})"
         msg = msg.format(namespaces, kwargs)
@@ -268,7 +244,7 @@ class Record(studiolibrary.Record):
             self.transferObject().select(namespaces=namespaces, **kwargs)
         except Exception, msg:
             title = "Error while selecting content"
-            QtGui.QMessageBox.critical(None, title, str(msg))
+            studioqt.MessageBox.critical(None, title, str(msg))
             raise
 
     def setTransferClass(self, classname):
@@ -313,12 +289,6 @@ class Record(studiolibrary.Record):
             if os.path.exists(path):
                 self._transferObject = self.transferClass().fromPath(path)
         return self._transferObject
-
-    def settings(self):
-        """
-        :rtype: studiolibrary.Settings
-        """
-        return Plugin.settings()
 
     def namespaces(self):
         """
@@ -386,7 +356,7 @@ class Record(studiolibrary.Record):
         """
         :rtype: list[str]
         """
-        return mutils.getNamespaceFromSelection() or [""]
+        return mutils.namespace.getFromSelection() or [""]
 
     def objectCount(self):
         """
@@ -415,7 +385,7 @@ class Record(studiolibrary.Record):
 
         logger.debug("Loaded: %s" % self.transferPath())
 
-    def save(self, objects, path=None, iconPath=None, force=False, **kwargs):
+    def save(self, objects, path=None, iconPath=None, **kwargs):
         """
         :type path: path
         :type objects: list
@@ -425,7 +395,7 @@ class Record(studiolibrary.Record):
         logger.info("Saving: {0}".format(path))
 
         contents = list()
-        tempDir = studiolibrary.TempDir("Transfer", clean=True)
+        tempDir = mutils.TempDir("Transfer", clean=True)
 
         transferPath = tempDir.path() + "/" + self.transferBasename()
         t = self.transferClass().fromObjects(objects)
@@ -435,12 +405,12 @@ class Record(studiolibrary.Record):
             contents.append(iconPath)
 
         contents.append(transferPath)
-        studiolibrary.Record.save(self, path=path, contents=contents, force=force)
+        studiolibrary.Record.save(self, path=path, contents=contents)
 
         logger.info("Saved: {0}".format(path))
 
 
-class BaseWidget(QtGui.QWidget):
+class BaseWidget(QtWidgets.QWidget):
 
     stateChanged = QtCore.Signal(object)
 
@@ -449,7 +419,7 @@ class BaseWidget(QtGui.QWidget):
         :type record: Record
         :type parent: studiolibrary.LibraryWidget
         """
-        QtGui.QWidget.__init__(self, parent)
+        QtWidgets.QWidget.__init__(self, parent)
         self.setObjectName("studioLibraryPluginsWidget")
 
         studioqt.loadUi(self)
@@ -488,7 +458,7 @@ class BaseWidget(QtGui.QWidget):
             self.ui.owner.setText(str(record.owner()))
 
         if hasattr(self.ui, 'comment'):
-            if isinstance(self.ui.comment, QtGui.QLabel):
+            if isinstance(self.ui.comment, QtWidgets.QLabel):
                 self.ui.comment.setText(record.description())
             else:
                 self.ui.comment.setPlainText(record.description())
@@ -503,7 +473,7 @@ class BaseWidget(QtGui.QWidget):
 
         ctime = record.ctime()
         if hasattr(self.ui, 'created') and ctime:
-            self.ui.created.setText(studiolibrary.timeAgo(str(ctime)))
+            self.ui.created.setText(studiolibrary.timeAgo(ctime))
 
     def record(self):
         """
@@ -530,6 +500,12 @@ class BaseWidget(QtGui.QWidget):
         """
         return {}
 
+    def settings(self):
+        """
+        :rtype: studiolibrary.Settings
+        """
+        return self.record().settings()
+
     def iconPath(self):
         """
         :rtype str
@@ -553,12 +529,6 @@ class BaseWidget(QtGui.QWidget):
         self.ui.snapshotButton.setIconSize(QtCore.QSize(200, 200))
         self.ui.snapshotButton.setText("")
 
-    def settings(self):
-        """
-        :rtype: studiolibrary.Settings
-        """
-        return self.record().settings()
-
     def libraryWidget(self):
         """
         :rtype: studiolibrary.LibraryWidget
@@ -570,7 +540,7 @@ class BaseWidget(QtGui.QWidget):
         :rtype: None
         """
         record = self.record()
-        record.showSelectionSetsMenu()
+        record.showSelectionSetsMenu(parent=self)
 
     def selectionChanged(self):
         """
@@ -615,7 +585,7 @@ class BaseWidget(QtGui.QWidget):
         sj = self.scriptJob()
         if sj:
             sj.kill()
-        QtGui.QWidget.close(self)
+        QtWidgets.QWidget.close(self)
 
     def objectCount(self):
         """
@@ -637,7 +607,7 @@ class InfoWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         """
         BaseWidget.__init__(self, *args, **kwargs)
 
@@ -654,7 +624,7 @@ class PreviewWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         """
         BaseWidget.__init__(self, *args, **kwargs)
 
@@ -787,7 +757,7 @@ class PreviewWidget(BaseWidget):
         namespaces = None
 
         if self.ui.useSelectionNamespace.isChecked():
-            namespaces = mutils.getNamespaceFromSelection()
+            namespaces = mutils.namespace.getFromSelection()
         elif self.ui.useFileNamespace.isChecked():
             namespaces = self.record().transferObject().namespaces()
 
@@ -815,7 +785,7 @@ class PreviewWidget(BaseWidget):
             self.record().load()
         except Exception, msg:
             title = "Error while loading"
-            QtGui.QMessageBox.critical(None, title, str(msg))
+            studioqt.MessageBox.critical(self, title, str(msg))
             raise
 
 
@@ -823,7 +793,7 @@ class CreateWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         """
-        :type parent: QtGui.QWidget
+        :type parent: QtWidgets.QWidget
         """
         BaseWidget.__init__(self, *args, **kwargs)
 
@@ -881,7 +851,7 @@ class CreateWidget(BaseWidget):
         import selectionsetmenu
 
         dirname = self.dirname()
-        menu = selectionsetmenu.SelectionSetMenu.fromPath(dirname)
+        menu = selectionsetmenu.SelectionSetMenu.fromPath(dirname, parent=self)
         position = QtGui.QCursor().pos()
 
         menu.exec_(position)
@@ -898,17 +868,21 @@ class CreateWidget(BaseWidget):
         """
         return self._modelPanel
 
+    def _captured(self, path):
+        """
+        Triggered when the user captures a thumbnail/playblast.
+
+        :type path: str
+        :rtype: None
+        """
+        self.setIconPath(path)
+
     def snapshot(self):
         """
         :rtype: None
         """
-        try:
-            path = Plugin.createTempIcon()
-            self.setIconPath(path)
-        except Exception, msg:
-            title = "Error while taking snapshot"
-            QtGui.QMessageBox.critical(None, title, str(msg))
-            raise
+        path = mutils.gui.tempThumbnailPath()
+        mutils.gui.capture(path=path, captured=self._captured)
 
     def snapshotQuestion(self):
         """
@@ -916,11 +890,11 @@ class CreateWidget(BaseWidget):
         """
         title = "Create a snapshot icon"
         message = "Would you like to create a snapshot icon?"
-        options = QtGui.QMessageBox.Yes | QtGui.QMessageBox.Ignore | QtGui.QMessageBox.Cancel
+        options = QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Ignore | QtWidgets.QMessageBox.Cancel
 
-        result = QtGui.QMessageBox.question(None, title, str(message), options)
+        result = studioqt.MessageBox.question(None, title, str(message), options)
 
-        if result == QtGui.QMessageBox.Yes:
+        if result == QtWidgets.QMessageBox.Yes:
             self.snapshot()
 
         return result
@@ -945,7 +919,7 @@ class CreateWidget(BaseWidget):
 
             if not os.path.exists(self.iconPath()):
                 result = self.snapshotQuestion()
-                if result == QtGui.QMessageBox.Cancel:
+                if result == QtWidgets.QMessageBox.Cancel:
                     return
 
             path = dirname + "/" + name
@@ -960,7 +934,7 @@ class CreateWidget(BaseWidget):
 
         except Exception, msg:
             title = "Error while saving"
-            QtGui.QMessageBox.critical(None, title, str(msg))
+            studioqt.MessageBox.critical(self, title, str(msg))
             raise
 
     def save(self, objects, path, iconPath, description):

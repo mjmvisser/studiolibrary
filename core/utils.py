@@ -1,8 +1,35 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary\core\utils.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary\core\utils.py
 import re
 import os
+import json
 import platform
 import subprocess
+from datetime import datetime
+__all__ = ['user',
+ 'walk',
+ 'isMaya',
+ 'isMac',
+ 'isLinux',
+ 'isWindows',
+ 'timeAgo',
+ 'saveDict',
+ 'readDict',
+ 'saveJson',
+ 'readJson',
+ 'listPaths',
+ 'splitPath',
+ 'findPaths',
+ 'Direction',
+ 'downloadUrl',
+ 'stringToList',
+ 'listToString',
+ 'openLocation',
+ 'validatePath',
+ 'validateString',
+ 'generateUniquePath',
+ 'generateUniqueName',
+ 'ValidatePathError',
+ 'ValidateStringError']
 RE_VALIDATE_PATH = re.compile('^[\\\\.:/\\sA-Za-z0-9_-]*$')
 RE_VALIDATE_STRING = re.compile('^[\\sA-Za-z0-9_-]+$')
 
@@ -26,10 +53,12 @@ class Direction:
     Down = 'down'
 
 
-class SortOption:
-    Name = 'name'
-    Ordered = 'ordered'
-    Modified = 'modified'
+def user():
+    """
+    :rtype: str
+    """
+    import getpass
+    return getpass.getuser().lower()
 
 
 def system():
@@ -37,57 +66,6 @@ def system():
     :rtype: str
     """
     return platform.system().lower()
-
-
-def validatePath(path):
-    """
-    :type path: str
-    :raise ValidatePathError
-    """
-    if not RE_VALIDATE_PATH.match(path):
-        msg = 'Invalid characters in path "{0}"! Please only use letters, numbers and forward slashes.'
-        msg = msg.format(path)
-        raise ValidatePathError(msg)
-
-
-def validateString(text):
-    """
-    :type text: str
-    :raise ValidateStringError
-    """
-    if not RE_VALIDATE_STRING.match(text):
-        msg = 'Invalid string "{0}"! Please only use letters and numbers'
-        msg = msg.format(str(text))
-        raise ValidateStringError(msg)
-
-
-def generateUniqueName(name, names, attempts = 1000):
-    """
-    :type name: str
-    :type names: list[str]
-    :type attempts: int
-    :rtype: str
-    """
-    for i in range(1, attempts):
-        result = name + str(i)
-        if result not in names:
-            return result
-
-    msg = "Cannot generate unique name '{0}'".format(name)
-    raise StudioLibraryError(msg)
-
-
-def openLocation(path):
-    """
-    :type path: str
-    :rtype: None
-    """
-    if isLinux():
-        os.system('konqueror "%s"&' % path)
-    elif isWindows():
-        os.startfile('%s' % path)
-    elif isMac():
-        subprocess.call(['open', '-R', path])
 
 
 def isMaya():
@@ -123,12 +101,154 @@ def isLinux():
     return system().startswith('lin')
 
 
-def user():
+def validatePath(path):
     """
+    :type path: str
+    :raise ValidatePathError
+    """
+    if not RE_VALIDATE_PATH.match(path):
+        msg = 'Invalid characters in path "{0}"! Please only use letters, numbers and forward slashes.'
+        msg = msg.format(path)
+        raise ValidatePathError(msg)
+
+
+def validateString(text):
+    """
+    :type text: str
+    :raise ValidateStringError
+    """
+    if not RE_VALIDATE_STRING.match(text):
+        msg = 'Invalid string "{0}"! Please only use letters and numbers'
+        msg = msg.format(str(text))
+        raise ValidateStringError(msg)
+
+
+def moveContents(contents, path):
+    """
+    Move the given contents to the specified path.
+    
+    :type contents: list[str]
+    """
+    for src in contents or []:
+        basename = os.path.basename(src)
+        dst = path + '/' + basename
+        logger.info('Moving Content: {0} => {1}'.format(src, dst))
+        shutil.move(src, dst)
+
+
+def saveJson(path, data):
+    """
+    Write a python dict to a json file.
+    
+    :type path: str
+    :type data: dict
+    :rtype: None
+    """
+    dirname = os.path.dirname(path)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+    with open(path, 'w') as f:
+        data = json.dumps(data, indent=4)
+        f.write(data)
+
+
+def readJson(path):
+    """
+    Read a json file to a python dict.
+    
+    :type path: str
+    :rtype: dict
+    """
+    data = {}
+    if os.path.exists(path):
+        with open(path, 'r') as f:
+            data_ = f.read()
+            if data_:
+                data = json.loads(data_)
+    return data
+
+
+def saveDict(path, data):
+    """
+    Write a python dict to disc.
+    
+    :type path: str
+    :type data: dict
+    :rtype: None
+    """
+    dirname = os.path.dirname(path)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+    with open(path, 'w') as f:
+        d = str(data)
+        test = eval(d, {})
+        f.write(d)
+
+
+def readDict(path):
+    """
+    Read a python dict from disc.
+    
+    :type path: str
+    :rtype: dict
+    """
+    data = {}
+    if os.path.exists(path):
+        with open(path, 'r') as f:
+            data_ = f.read()
+            if data_:
+                data = eval(data_, {})
+    return data
+
+
+def generateUniqueName(name, names, attempts = 1000):
+    """
+    :type name: str
+    :type names: list[str]
+    :type attempts: int
     :rtype: str
     """
-    import getpass
-    return getpass.getuser().lower()
+    for i in range(1, attempts):
+        result = name + str(i)
+        if result not in names:
+            return result
+
+    msg = "Cannot generate unique name for '{name}'"
+    msg = msg.format(name=name)
+    raise StudioLibraryError(msg)
+
+
+def generateUniquePath(path, attempts = 1000):
+    """
+    :type path:  str
+    :type attempts: int
+    :rtype: str
+    """
+    attempt = 1
+    dirname, name, extension = splitPath(path)
+    path_ = '{dirname}/{name} ({number}){extension}'
+    while os.path.exists(path):
+        attempt += 1
+        path = path_.format(name=name, number=attempt, dirname=dirname, extension=extension)
+        if attempt >= attempts:
+            msg = 'Cannot generate unique name for path {path}'
+            msg = msg.format(path=path)
+            raise ValueError(msg)
+
+    return path
+
+
+def openLocation(path):
+    """
+    :type path: str
+    :rtype: None
+    """
+    if isLinux():
+        os.system('konqueror "%s"&' % path)
+    elif isWindows():
+        os.startfile('%s' % path)
+    elif isMac():
+        subprocess.call(['open', '-R', path])
 
 
 def copyPath(srcPath, dstPath):
@@ -165,6 +285,7 @@ def listToString(data):
     :type data: list[]
     :rtype: str
     """
+    data = [ str(item) for item in data ]
     data = str(data).replace('[', '').replace(']', '')
     data = data.replace("'", '').replace('"', '')
     return data
@@ -181,26 +302,6 @@ def stringToList(data):
     return eval(data)
 
 
-def walk(path, separator = '/', direction = Direction.Down):
-    """
-    :type path: str
-    :type separator: str
-    :type direction: Direction
-    """
-    if os.path.isfile(path):
-        path = os.path.dirname(path)
-    if not path.endswith(separator):
-        path += separator
-    folders = path.split(separator)
-    for i, folder in enumerate(folders):
-        if direction == Direction.Up:
-            result = separator.join(folders[:i * -1])
-        elif direction == Direction.Down:
-            result = separator.join(folders[:i - 1])
-        if result and os.path.exists(result):
-            yield result
-
-
 def listPaths(path):
     """
     :type path: str
@@ -214,21 +315,93 @@ def listPaths(path):
     return results
 
 
-def findPaths(dirname, search, direction = Direction.Up):
+def findPaths(path, match = None, ignore = None, direction = Direction.Down, depth = 3):
     """
-    :type dirname: str
-    :type search: str
+    Return a list of file paths by walking the root path either up or down.
+    
+    Example:
+        path = r'C:\\Users\\Hovel\\Dropbox\\libraries\x07nimation\\Malcolm\x07nim'
+    
+        for path in findPaths(path, match=lambda path: path.endswith(".set"), direction=Direction.Up, depth=5):
+            print path
+    
+        for path in findPaths(path, match=lambda path: path.endswith(".anim"), direction=Direction.Down, depth=3):
+            print path
+    
+    :type path: str
+    :type match: func
+    :type depth: int
     :type direction: Direction
-    :rtype: dict[str]
+    :rtype: list[str]
     """
-    results = []
-    for path in walk(dirname, direction=direction):
-        for filename in os.listdir(path):
-            if search is None or search in filename:
-                value = path + '/' + filename
-                results.append(value)
+    if os.path.isfile(path):
+        path = os.path.dirname(path)
+    if depth <= 1 and direction == Direction.Down:
+        paths = listPaths(path)
+    elif direction == Direction.Down:
+        paths = walk(path, match=match, depth=depth, ignore=ignore)
+    elif direction == Direction.Up:
+        paths = walkup(path, match=match, depth=depth)
+    else:
+        raise Exception('Direction not supported {0}'.format(direction))
+    return paths
 
-    return results
+
+def walkup(path, match = None, depth = 3):
+    """
+    :type path: str
+    :type match: func
+    :type depth: int
+    :rtype: list[str]
+    """
+    sep = '/'
+    path = os.path.realpath(path)
+    path = path.replace('\\', '/')
+    if not path.endswith(sep):
+        path += sep
+    folders = path.split(sep)
+    depthCount = 0
+    for i, folder in enumerate(folders):
+        if folder:
+            if depthCount > depth:
+                break
+            depthCount += 1
+            folder = os.path.sep.join(folders[:i * -1])
+            if os.path.exists(folder):
+                for filename in os.listdir(folder):
+                    path = os.path.join(folder, filename)
+                    if match is None or match(path):
+                        yield path
+
+
+def walk(path, match = None, ignore = None, depth = 3):
+    """
+    :type path: str
+    :type match: func
+    :type depth: int
+    :rtype: list[str]
+    """
+    path = path.rstrip(os.path.sep)
+    path = os.path.realpath(path)
+    maxDepth = depth
+    assert os.path.isdir(path)
+    startDepth = path.count(os.path.sep)
+    for root, dirs, files in os.walk(path):
+        files.extend(dirs)
+        for filename in files:
+            path = os.path.join(root, filename)
+            valid = True
+            for pattern in ignore or []:
+                if pattern in path:
+                    valid = False
+                    break
+
+            if valid and (match is None or match(path)):
+                yield path
+
+        currentDepth = root.count(os.path.sep)
+        if currentDepth - startDepth >= maxDepth:
+            del dirs[:]
 
 
 def downloadUrl(url, destination = None):
@@ -262,61 +435,47 @@ def downloadUrl(url, destination = None):
         raise
 
 
-def timeAgo(t):
+def timeAgo(timeStamp):
     """
-    :type t: str
+    :type timeStamp: str
     :rtype: str
     """
-    return timeDiff(t)
-
-
-def timeDiff(t = False):
-    """
-    :type t: str
-    :rtype: str
-    """
-    if isinstance(t, str):
-        t = int(t.split('.')[0])
-    from datetime import datetime
-    now = datetime.now()
-    if type(t) is int:
-        diff = now - datetime.fromtimestamp(t)
-    elif isinstance(t, datetime):
-        diff = now - t
-    else:
-        diff = now - now
-    second_diff = diff.seconds
-    day_diff = diff.days
-    if day_diff < 0:
+    t1 = int(timeStamp)
+    t1 = datetime.fromtimestamp(t1)
+    t2 = datetime.now()
+    diff = t2 - t1
+    dayDiff = diff.days
+    secondsDiff = diff.seconds
+    if dayDiff < 0:
         return ''
-    if day_diff == 0:
-        if second_diff < 10:
+    if dayDiff == 0:
+        if secondsDiff < 10:
             return 'just now'
-        if second_diff < 60:
-            return str(second_diff) + ' seconds ago'
-        if second_diff < 120:
+        if secondsDiff < 60:
+            return str(secondsDiff) + ' seconds ago'
+        if secondsDiff < 120:
             return 'a minute ago'
-        if second_diff < 3600:
-            return str(second_diff / 60) + ' minutes ago'
-        if second_diff < 7200:
+        if secondsDiff < 3600:
+            return str(secondsDiff / 60) + ' minutes ago'
+        if secondsDiff < 7200:
             return 'an hour ago'
-        if second_diff < 86400:
-            return str(second_diff / 3600) + ' hours ago'
-    if day_diff == 1:
-        return 'Yesterday'
-    if day_diff < 7:
-        return str(day_diff) + ' days ago'
-    if day_diff < 31:
-        v = day_diff / 7
+        if secondsDiff < 86400:
+            return str(secondsDiff / 3600) + ' hours ago'
+    if dayDiff == 1:
+        return 'yesterday'
+    if dayDiff < 7:
+        return str(dayDiff) + ' days ago'
+    if dayDiff < 31:
+        v = dayDiff / 7
         if v == 1:
             return str(v) + ' week ago'
-        return str(day_diff / 7) + ' weeks ago'
-    if day_diff < 365:
-        v = day_diff / 30
+        return str(dayDiff / 7) + ' weeks ago'
+    if dayDiff < 365:
+        v = dayDiff / 30
         if v == 1:
             return str(v) + ' month ago'
         return str(v) + ' months ago'
-    v = day_diff / 365
+    v = dayDiff / 365
     if v == 1:
         return str(v) + ' year ago'
     return str(v) + ' years ago'

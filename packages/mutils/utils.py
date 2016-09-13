@@ -1,12 +1,17 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary/packages/mutils\utils.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary/packages/mutils\utils.py
+import shutil
 import platform
-import mutils
+import traceback
+from studioqt import QtGui
+from studioqt import QtCore
+from studioqt import QtWidgets
 try:
     import maya.mel
     import maya.cmds
-except Exception:
-    import traceback
+except ImportError:
     traceback.print_exc()
+
+import mutils
 
 class MayaUtilsError(Exception):
     """Base class for exceptions in this module."""
@@ -65,6 +70,22 @@ def isMaya():
         return False
 
 
+def selectionModifiers():
+    """
+    Return the current selection modifiers.
+    
+    :rtype: dict
+    """
+    result = {'add': False,
+     'deselect': False}
+    modifiers = QtWidgets.QApplication.keyboardModifiers()
+    if modifiers == QtCore.Qt.ShiftModifier:
+        result['deselect'] = True
+    elif modifiers == QtCore.Qt.ControlModifier:
+        result['add'] = True
+    return result
+
+
 def ls(*args, **kwargs):
     """
     :rtype: list[Node]
@@ -82,19 +103,28 @@ def listAttr(node, **kwargs):
     return [ mutils.Attribute(node.name(), attr) for attr in attrs or [] ]
 
 
-def currentRange():
+def currentFrameRange():
     """
     :rtype: (int, int)
     """
-    start, end = selectedRange()
+    start, end = selectedFrameRange()
     if end == start:
-        start, end = animationRange()
+        start, end = animationFrameRange()
         if start == end:
-            start, end = playbackRange()
+            start, end = playbackFrameRange()
     return (start, end)
 
 
-def selectedRange():
+def playbackFrameRange():
+    """
+    :rtype: (int, int)
+    """
+    start = maya.cmds.playbackOptions(query=True, min=True)
+    end = maya.cmds.playbackOptions(query=True, max=True)
+    return (start, end)
+
+
+def selectedFrameRange():
     """
     :rtype: (int, int)
     """
@@ -106,12 +136,17 @@ def selectedRange():
     return (start, end)
 
 
-def playbackRange():
+def animationFrameRange(dagPaths = None):
     """
-    :rtype: (int, int)
+    :rtype : (int, int)
     """
-    start = maya.cmds.playbackOptions(query=True, min=True)
-    end = maya.cmds.playbackOptions(query=True, max=True)
+    start = 0
+    end = 0
+    if not dagPaths:
+        dagPaths = maya.cmds.ls(selection=True) or []
+    if dagPaths:
+        start = int(maya.cmds.findKeyframe(dagPaths, which='first'))
+        end = int(maya.cmds.findKeyframe(dagPaths, which='last'))
     return (start, end)
 
 
@@ -134,13 +169,12 @@ def connectedAttrs(objects):
 
 def currentModelPanel():
     """
-    :rtype: str
+    :rtype: str or None
     """
     currentPanel = maya.cmds.getPanel(withFocus=True)
     currentPanelType = maya.cmds.getPanel(typeOf=currentPanel)
     if currentPanelType not in ('modelPanel',):
-        msg = 'Cannot find model panel with focus. Please select a model panel.'
-        raise ModelPanelNotInFocusError(msg)
+        return None
     return currentPanel
 
 
@@ -152,20 +186,6 @@ def bakeConnected(objects, time, sampleBy = 1):
         maya.cmds.bakeResults(bakeAttrs, time=time, shape=False, simulation=True, sampleBy=sampleBy, controlPoints=False, minimizeRotation=True, bakeOnOverrideLayer=False, preserveOutsideKeys=False, sparseAnimCurveBake=False, disableImplicitControl=True, removeBakedAttributeFromLayer=False)
     else:
         print 'cannot find connection to bake!'
-
-
-def animationRange(objects = None):
-    """
-    :rtype : (int, int)
-    """
-    start = 0
-    end = 0
-    if not objects:
-        objects = maya.cmds.ls(selection=True) or []
-    if objects:
-        start = int(maya.cmds.findKeyframe(objects, which='first'))
-        end = int(maya.cmds.findKeyframe(objects, which='last'))
-    return (start, end)
 
 
 def disconnectAll(name):
@@ -233,36 +253,6 @@ def getSelectedAttrs():
     return attributes
 
 
-def getNamespaceFromNames(objects):
-    """
-    :type objects: list[str]
-    :rtype: list[str]
-    """
-    result = []
-    for node in mutils.Node.get(objects):
-        if node.namespace() not in result:
-            result.append(node.namespace())
-
-    return result
-
-
-def getNamespaceFromObjects(objects):
-    """
-    :type objects: list[str]
-    :rtype: list[str]
-    """
-    namespaces = [ mutils.Node(name).namespace() for name in objects ]
-    return list(set(namespaces))
-
-
-def getNamespaceFromSelection():
-    """
-    :rtype: list[str]
-    """
-    objects = maya.cmds.ls(selection=True)
-    return getNamespaceFromObjects(objects)
-
-
 def getDurationFromNodes(nodes):
     """
     :type nodes: list[str]
@@ -279,24 +269,3 @@ def getDurationFromNodes(nodes):
         return l - s
     else:
         return 0
-
-
-class ScriptJob(object):
-    """
-    self._scriptJob = mutils.ScriptJob(e=['SelectionChanged', self.selectionChanged])
-    """
-
-    def __init__(self, *args, **kwargs):
-        self.id = maya.cmds.scriptJob(*args, **kwargs)
-
-    def kill(self):
-        if self.id:
-            maya.cmds.scriptJob(kill=self.id, force=True)
-            self.id = None
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, t, v, tb):
-        if t is not None:
-            self.kill()

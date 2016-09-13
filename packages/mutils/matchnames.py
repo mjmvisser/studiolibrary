@@ -1,4 +1,4 @@
-#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.12.1/build27/studiolibrary/packages/mutils\matchnames.py
+#Embedded file name: C:/Users/hovel/Dropbox/packages/studiolibrary/1.23.2/build27/studiolibrary/packages/mutils\matchnames.py
 import logging
 import mutils
 __all__ = ['matchNames', 'groupObjects']
@@ -64,7 +64,7 @@ def matchInIndex(node, index):
     return result
 
 
-def matchNames(srcObjects, dstObjects = None, dstNamespaces = None):
+def matchNames(srcObjects, dstObjects = None, dstNamespaces = None, search = None, replace = None):
     """
     :type srcObjects: list[str]
     :type dstObjects: list[str]
@@ -91,6 +91,8 @@ def matchNames(srcObjects, dstObjects = None, dstNamespaces = None):
             usedNamespaces.append(srcNamespace)
             for name in srcGroup[srcNamespace]:
                 srcNode = mutils.Node(name)
+                if search is not None and replace is not None:
+                    name = name.replace(search, replace)
                 dstNode = mutils.Node(name)
                 if dstObjects:
                     dstNode = matchInIndex(dstNode, dstIndex)
